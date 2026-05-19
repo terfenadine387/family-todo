@@ -471,16 +471,26 @@ export default function FamilyTodo() {
 
   // メッセージ受信
   useEffect(() => {
-    if (!currentUser || !messaging) return;
-    try {
-      const unsubMessage = onMessage(messaging, (payload) => {
-        const { title, body } = payload.notification;
-        showToast(`${title}：${body}`);
-      });
-      return () => unsubMessage();
-    } catch (err) {
-      console.warn("メッセージ待受エラー:", err);
-    }
+    if (!currentUser) return;
+
+    let unsubMessage = null;
+
+    isSupported().then((supported) => {
+      if (!supported) return;
+      try {
+        const m = getMessaging();
+        unsubMessage = onMessage(m, (payload) => {
+          const { title, body } = payload.notification;
+          showToast(`${title}：${body}`);
+        });
+      } catch (e) {
+        console.warn("onMessage失敗:", e);
+      }
+    });
+
+    return () => {
+      if (unsubMessage) unsubMessage();
+    };
   }, [currentUser]);
 
   const [scopeDialog, setScopeDialog] = useState(null);
