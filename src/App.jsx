@@ -428,18 +428,23 @@ export default function FamilyTodo() {
 
     async function registerToken() {
       try {
-        // ★修正：すでに許可されている場合のみトークンを取得する
-        if (Notification.permission !== "granted") return;
+        // 許可を明示的にリクエスト
+        const permission = await Notification.requestPermission();
+        console.log("通知許可状態:", permission);
+        if (permission !== "granted") return;
 
         const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+        console.log("取得トークン:", token);
+        
         if (token) {
           await setDoc(doc(db, "members", currentUser), {
             fcmToken: token,
             updatedAt: serverTimestamp(),
           }, { merge: true });
+          console.log("トークン保存完了");
         }
       } catch (err) {
-        console.warn("FCMトークン取得エラー(無視して続行):", err);
+        console.warn("FCMトークンエラー:", err);
       }
     }
 
