@@ -141,7 +141,12 @@ function MemberSelect({ onSelect }) {
   // ★追加：ボタンを押した瞬間に通知許可を出す
   const handleSelect = async (id) => {
     if (typeof Notification !== "undefined" && Notification.requestPermission) {
-      try { await Notification.requestPermission(); } catch (e) {}
+      // まだ許可も拒否もされていない(default)場合のみダイアログを出す
+      if (Notification.permission === "default") {
+        try {
+          await Notification.requestPermission();
+        } catch (e) {}
+      }
     }
     onSelect(id);
   };
@@ -439,10 +444,12 @@ export default function FamilyTodo() {
           return;
         }
 
-        logs.push(`通知許可状態: ${Notification.permission}`);
-        const permission = await Notification.requestPermission();
-        logs.push(`許可結果: ${permission}`);
-        if (permission !== "granted") {
+        const perm = Notification.permission;
+        logs.push(`通知許可状態: ${perm}`);
+        
+        // ★修正：自動処理の中では絶対に requestPermission() を呼ばない
+        if (perm !== "granted") {
+          logs.push("❌ 許可されていないため処理を中断");
           setDebugLog(logs.join("\n"));
           return;
         }
