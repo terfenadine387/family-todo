@@ -622,8 +622,23 @@ export default function FamilyTodo() {
     setShowModal(false);
   }
 
+// 一時的なエラー表示
+  if (typeof window !== "undefined") {
+    window.onerror = (msg, src, line) => {
+      document.body.innerHTML = `<div style="color:red;padding:20px;font-size:14px;background:#000;min-height:100vh">${msg}<br/>${src}<br/>line:${line}</div>`;
+    };
+  }
+
   if (!currentUser) {
-    return <MemberSelect onSelect={(id) => setCurrentUser(id)} />;
+    return (
+      <MemberSelect onSelect={(id) => {
+        try {
+          setCurrentUser(id);
+        } catch(e) {
+          alert("エラー: " + e.message);
+        }
+      }} />
+    );
   }
 
   const accentColor = "#ffa94d";
