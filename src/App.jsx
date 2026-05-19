@@ -420,6 +420,8 @@ export default function FamilyTodo() {
   // 通知許可＆トークン取得
   useEffect(() => {
     if (!currentUser) return;
+
+    setDebugLog("useEffect発火: " + currentUser);
     
     // 【重要】iPhone(Safari)等の非対応ブラウザの場合はここでスキップしてクラッシュを防ぐ
     if (!messaging || typeof Notification === "undefined") {
