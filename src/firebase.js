@@ -24,3 +24,6 @@ isSupported().then((supported) => {
 // VAPIDキーは次のステップで取得します
 export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 export { getToken, onMessage };
+
+export { app }; // 追加
+export const db = getFirestore(app);

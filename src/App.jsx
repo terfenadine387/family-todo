@@ -428,23 +428,35 @@ export default function FamilyTodo() {
 
     async function registerToken() {
       try {
-        // 許可を明示的にリクエスト
-        const permission = await Notification.requestPermission();
-        console.log("通知許可状態:", permission);
-        if (permission !== "granted") return;
+        // messagingの初期化を待つ
+        const { isSupported, getMessaging, getToken } = await import("firebase/messaging");
+        const supported = await isSupported();
+        if (!supported) {
+          console.log("FCM非対応ブラウザ");
+          return;
+        }
 
-        const token = await getToken(messaging, { vapidKey: VAPID_KEY });
-        console.log("取得トークン:", token);
-        
+        const { app } = await import("./firebase");
+        const m = getMessaging(app);
+
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          console.log("通知拒否");
+          return;
+        }
+
+        const token = await getToken(m, { vapidKey: VAPID_KEY });
+        console.log("トークン:", token);
+
         if (token) {
           await setDoc(doc(db, "members", currentUser), {
             fcmToken: token,
             updatedAt: serverTimestamp(),
           }, { merge: true });
-          console.log("トークン保存完了");
+          console.log("保存完了！");
         }
       } catch (err) {
-        console.warn("FCMトークンエラー:", err);
+        console.error("FCMエラー:", err);
       }
     }
 
