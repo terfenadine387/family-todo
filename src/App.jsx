@@ -808,18 +808,6 @@ export default function FamilyTodo() {
         <div style={{ height:90 }} />
       </div>
 
-      {debugLog && (
-      <div style={{
-        position: "fixed", bottom: 100, left: 20, right: 20,
-        background: "#1e293b", border: "1px solid #334155",
-        borderRadius: 12, padding: 12, zIndex: 9999,
-        fontSize: 11, color: "#94a3b8", whiteSpace: "pre-wrap",
-        fontFamily: "monospace"
-      }}>
-        {debugLog}
-      </div>
-    )}
-
       {/* ── FAB ── */}
       <button onClick={openAdd} style={{
         position:"fixed",
