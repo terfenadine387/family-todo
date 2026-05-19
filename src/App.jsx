@@ -138,14 +138,11 @@ const iStyle = {
 };
 
 function MemberSelect({ onSelect }) {
-  // ★追加：ボタンを押した瞬間に通知許可を出す
+  // ★ボタンを押した瞬間に通知許可を出す（デフォルト時のみ）
   const handleSelect = async (id) => {
     if (typeof Notification !== "undefined" && Notification.requestPermission) {
-      // まだ許可も拒否もされていない(default)場合のみダイアログを出す
       if (Notification.permission === "default") {
-        try {
-          await Notification.requestPermission();
-        } catch (e) {}
+        try { await Notification.requestPermission(); } catch (e) {}
       }
     }
     onSelect(id);
@@ -447,7 +444,7 @@ export default function FamilyTodo() {
         const perm = Notification.permission;
         logs.push(`通知許可状態: ${perm}`);
         
-        // ★修正：自動処理の中では絶対に requestPermission() を呼ばない
+        // ★自動で requestPermission() は呼ばず、許可されているかだけチェック
         if (perm !== "granted") {
           logs.push("❌ 許可されていないため処理を中断");
           setDebugLog(logs.join("\n"));
@@ -639,12 +636,7 @@ export default function FamilyTodo() {
     setShowModal(false);
   }
 
-// 一時的なエラー表示
-  if (typeof window !== "undefined") {
-    window.onerror = (msg, src, line) => {
-      document.body.innerHTML = `<div style="color:red;padding:20px;font-size:14px;background:#000;min-height:100vh">${msg}<br/>${src}<br/>line:${line}</div>`;
-    };
-  }
+  // ★ onerrorでの画面上書きは削除しました
 
   if (!currentUser) {
     return (
