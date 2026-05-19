@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { db, messaging, VAPID_KEY, getToken, onMessage } from "./firebase";
+import { db, VAPID_KEY } from "./firebase";
 import {
   collection,
   onSnapshot,
@@ -10,6 +10,12 @@ import {
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import {
+  isSupported,
+  getMessaging,
+  getToken,
+  onMessage,
+} from "firebase/messaging";
 
 // ── Constants ──────────────────────────────────────────────
 const MEMBERS = [
@@ -422,37 +428,26 @@ export default function FamilyTodo() {
     if (!currentUser) return;
 
     setDebugLog("useEffect発火: " + currentUser);
-    
-    // 【重要】iPhone(Safari)等の非対応ブラウザの場合はここでスキップしてクラッシュを防ぐ
-    if (!messaging || typeof Notification === "undefined") {
-      console.log("このブラウザはプッシュ通知に非対応です");
-      return;
-    }
 
     async function registerToken() {
-      const logs = [];
+      const logs = ["開始"];
       try {
-        logs.push("開始");
-
         const supported = await isSupported();
         logs.push(`FCM対応: ${supported}`);
         if (!supported) {
-          setToast("FCM非対応ブラウザです");
+          setDebugLog(logs.join("\n"));
           return;
         }
 
         logs.push(`通知許可状態: ${Notification.permission}`);
         const permission = await Notification.requestPermission();
         logs.push(`許可結果: ${permission}`);
-
         if (permission !== "granted") {
-          setToast("通知が許可されていません");
+          setDebugLog(logs.join("\n"));
           return;
         }
 
-        const { getMessaging } = await import("firebase/messaging");
-        const { app } = await import("./firebase");
-        const m = getMessaging(app);
+        const m = getMessaging();
         logs.push("messaging取得OK");
 
         const token = await getToken(m, { vapidKey: VAPID_KEY });
@@ -463,17 +458,11 @@ export default function FamilyTodo() {
             fcmToken: token,
             updatedAt: serverTimestamp(),
           }, { merge: true });
-          logs.push("Firestore保存OK");
-          setToast("✅ トークン保存成功！");
-        } else {
-          setToast("❌ トークンが取得できませんでした");
+          logs.push("Firestore保存OK ✅");
         }
       } catch (err) {
         logs.push(`エラー: ${err.message}`);
-        setToast(`❌ ${err.message}`);
       }
-
-      // 画面にログを表示
       setDebugLog(logs.join("\n"));
     }
 

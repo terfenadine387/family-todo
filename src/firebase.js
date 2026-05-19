@@ -1,6 +1,5 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getMessaging, isSupported, getToken, onMessage } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,19 +10,6 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-
-export let messaging = null;
-isSupported().then((supported) => {
-  if (supported) {
-    messaging = getMessaging(app);
-  }
-}).catch(console.error);
-
-// VAPIDキーは次のステップで取得します
 export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
-export { getToken, onMessage };
-
-export { app }; // 追加
-export const db = getFirestore(app);
