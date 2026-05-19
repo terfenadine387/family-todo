@@ -394,6 +394,7 @@ export default function FamilyTodo() {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [debugLog, setDebugLog] = useState("");
 
   // Firestoreリアルタイム同期
   useEffect(() => {
@@ -427,37 +428,51 @@ export default function FamilyTodo() {
     }
 
     async function registerToken() {
+      const logs = [];
       try {
-        // messagingの初期化を待つ
-        const { isSupported, getMessaging, getToken } = await import("firebase/messaging");
+        logs.push("開始");
+
         const supported = await isSupported();
+        logs.push(`FCM対応: ${supported}`);
         if (!supported) {
-          console.log("FCM非対応ブラウザ");
+          setToast("FCM非対応ブラウザです");
           return;
         }
 
+        logs.push(`通知許可状態: ${Notification.permission}`);
+        const permission = await Notification.requestPermission();
+        logs.push(`許可結果: ${permission}`);
+
+        if (permission !== "granted") {
+          setToast("通知が許可されていません");
+          return;
+        }
+
+        const { getMessaging } = await import("firebase/messaging");
         const { app } = await import("./firebase");
         const m = getMessaging(app);
-
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-          console.log("通知拒否");
-          return;
-        }
+        logs.push("messaging取得OK");
 
         const token = await getToken(m, { vapidKey: VAPID_KEY });
-        console.log("トークン:", token);
+        logs.push(`トークン: ${token ? token.slice(0, 20) + "..." : "なし"}`);
 
         if (token) {
           await setDoc(doc(db, "members", currentUser), {
             fcmToken: token,
             updatedAt: serverTimestamp(),
           }, { merge: true });
-          console.log("保存完了！");
+          logs.push("Firestore保存OK");
+          setToast("✅ トークン保存成功！");
+        } else {
+          setToast("❌ トークンが取得できませんでした");
         }
       } catch (err) {
-        console.error("FCMエラー:", err);
+        logs.push(`エラー: ${err.message}`);
+        setToast(`❌ ${err.message}`);
       }
+
+      // 画面にログを表示
+      setDebugLog(logs.join("\n"));
     }
 
     registerToken();
@@ -777,6 +792,18 @@ export default function FamilyTodo() {
         })}
         <div style={{ height:90 }} />
       </div>
+
+      {debugLog && (
+      <div style={{
+        position: "fixed", bottom: 100, left: 20, right: 20,
+        background: "#1e293b", border: "1px solid #334155",
+        borderRadius: 12, padding: 12, zIndex: 9999,
+        fontSize: 11, color: "#94a3b8", whiteSpace: "pre-wrap",
+        fontFamily: "monospace"
+      }}>
+        {debugLog}
+      </div>
+    )}
 
       {/* ── FAB ── */}
       <button onClick={openAdd} style={{
