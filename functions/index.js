@@ -88,6 +88,7 @@ const now = new Date();
 
     for (const todo of todos) {
       if (todo.notifyTime !== currentTime) continue;
+      if (!todo.notifyEnabled) continue;
       if (!occursOn(todo, todayStr)) continue;
       if ((todo.completedDates || []).includes(todayStr)) continue;
 

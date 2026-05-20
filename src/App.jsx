@@ -787,7 +787,7 @@ export default function FamilyTodo() {
                   <span style={{ fontSize:11, background:am.color+"22", color:am.color, padding:"2px 8px", borderRadius:10 }}>
                     {getRepeatLabel(todo)}
                   </span>
-                  {todo.notifyTime && <span style={{ fontSize:11, color:"#64748b" }}>⏰ {todo.notifyTime}</span>}
+                  {todo.notifyEnabled && todo.notifyTime && <span style={{ fontSize:11, color:"#64748b" }}>⏰ {todo.notifyTime}</span>}
                   {memberFilter === "all" && <span style={{ fontSize:11, color:"#64748b" }}>{am.emoji} {am.name}</span>}
                 </div>
                 {todo.memo ? <div style={{ fontSize:12, color:"#64748b", marginTop:3 }}>{todo.memo}</div> : null}
@@ -964,7 +964,7 @@ export default function FamilyTodo() {
                 <div style={{ fontSize:11, color:"#64748b", marginBottom:4 }}>設定プレビュー</div>
                 <div style={{ fontSize:14, color:accentColor, fontWeight:600 }}>
                   {getRepeatLabel(draft)}
-                  {draft.notifyTime ? ` ・ ⏰${draft.notifyTime}` : ""}
+                  {draft.notifyEnabled && draft.notifyTime ? ` ・ ⏰${draft.notifyTime}` : ""}
                   {draft.endDate ? ` ・ 〜${draft.endDate}まで` : ""}
                 </div>
               </div>
