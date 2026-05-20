@@ -462,15 +462,16 @@ export default function FamilyTodo() {
         logs.push(`トークン: ${token ? token.slice(0, 20) + "..." : "なし"}`);
 
         if (token) {
-          // 端末ごとにユニークなIDを生成して保存
-          const tokenId = btoa(token).slice(0, 20);
+          // トークン自体をIDとして使う（同じ端末は必ず同じIDになる）
+          const tokenId = token.slice(-20); // トークンの末尾20文字をIDに
           await setDoc(
             doc(db, "members", currentUser, "tokens", tokenId),
             {
               fcmToken: token,
               updatedAt: serverTimestamp(),
               userAgent: navigator.userAgent,
-            }
+            },
+            { merge: true }
           );
           console.log("トークン保存完了:", tokenId);
         }
