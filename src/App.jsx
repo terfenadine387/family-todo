@@ -403,7 +403,7 @@ export default function FamilyTodo() {
   const [notifications, setNotifications] = useState([]);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("familyTodoUser") || null);
   const [debugLog, setDebugLog] = useState("");
 
   // Firestoreリアルタイム同期
@@ -460,12 +460,19 @@ export default function FamilyTodo() {
         logs.push(`トークン: ${token ? token.slice(0, 20) + "..." : "なし"}`);
 
         if (token) {
-          await setDoc(doc(db, "members", currentUser), {
-            fcmToken: token,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-          logs.push("Firestore保存OK ✅");
+          // 端末ごとにユニークなIDを生成して保存
+          const tokenId = btoa(token).slice(0, 20);
+          await setDoc(
+            doc(db, "members", currentUser, "tokens", tokenId),
+            {
+              fcmToken: token,
+              updatedAt: serverTimestamp(),
+              userAgent: navigator.userAgent,
+            }
+          );
+          console.log("トークン保存完了:", tokenId);
         }
+        
       } catch (err) {
         logs.push(`エラー: ${err.message}`);
       }
@@ -643,11 +650,8 @@ export default function FamilyTodo() {
   if (!currentUser) {
     return (
       <MemberSelect onSelect={(id) => {
-        try {
-          setCurrentUser(id);
-        } catch(e) {
-          alert("エラー: " + e.message);
-        }
+        localStorage.setItem("familyTodoUser", id);
+        setCurrentUser(id);
       }} />
     );
   }
@@ -704,7 +708,10 @@ export default function FamilyTodo() {
           {(() => {
             const u = MEMBERS.find(m => m.id === currentUser);
             return (
-              <button onClick={() => setCurrentUser(null)} style={{
+              <button onClick={() => {
+                localStorage.removeItem("familyTodoUser");
+                setCurrentUser(null);
+              }} style={{
                 display: "flex", alignItems: "center", gap: 6,
                 background: u.color + "22", border: `1px solid ${u.color}44`,
                 borderRadius: 20, padding: "6px 12px", cursor: "pointer",
