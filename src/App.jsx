@@ -40,7 +40,9 @@ const REPEAT_TYPES = [
 
 // ── Helpers ────────────────────────────────────────────────
 function toYMD(date) {
-  return date.toISOString().slice(0, 10);
+  // 日本時間基準で YYYY-MM-DD を返す
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return jst.toISOString().slice(0, 10);
 }
 function parseYMD(str) {
   const [y, m, d] = str.split("-").map(Number);
@@ -472,7 +474,7 @@ export default function FamilyTodo() {
           );
           console.log("トークン保存完了:", tokenId);
         }
-        
+
       } catch (err) {
         logs.push(`エラー: ${err.message}`);
       }
