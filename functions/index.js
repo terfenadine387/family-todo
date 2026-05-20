@@ -64,11 +64,18 @@ exports.sendScheduledNotifications = onSchedule(
     region: "asia-northeast1",
   },
   async () => {
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
+const now = new Date();
+
+    // 日本時間に変換
+    const jstOffset = 9 * 60; // 分
+    const jstNow = new Date(now.getTime() + jstOffset * 60 * 1000);
+
+    const hh = String(jstNow.getUTCHours()).padStart(2, "0");
+    const mm = String(jstNow.getUTCMinutes()).padStart(2, "0");
     const currentTime = `${hh}:${mm}`;
-    const todayStr = now.toISOString().slice(0, 10);
+    const todayStr = jstNow.toISOString().slice(0, 10);
+
+    console.log(`実行時刻(JST): ${currentTime} / ${todayStr}`);
 
     console.log(`時刻通知チェック: ${currentTime} / ${todayStr}`);
 

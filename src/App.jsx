@@ -386,7 +386,9 @@ function HorizontalCalendar({ selectedDate, onSelect, todos }) {
 function emptyDraft(selectedDate) {
   return {
     title:"", memo:"", assignee:"shiko", repeat:"daily", weekdays:[], monthDay:1, monthWeekPos:0, monthWeekDay:0,
-    yearDate:"", customInterval:1, customUnit:"day", notifyTime:"08:00", startDate: selectedDate, endDate:"", completedDates:[], skippedDates:[],
+    yearDate:"", customInterval:1, customUnit:"day",
+    notifyEnabled: false, // ← 追加（デフォルト通知なし）
+    notifyTime:"08:00", startDate: selectedDate, endDate:"", completedDates:[], skippedDates:[],
   };
 }
 
@@ -832,7 +834,14 @@ export default function FamilyTodo() {
           }}>
             <div style={{ padding:"20px 20px 14px", borderBottom:"1px solid #1e293b", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontWeight:700, fontSize:16 }}>🔔 通知</span>
-              <button onClick={() => setNotifications(n => n.map(x=>({...x,read:true})))} style={{ background:"none", border:"none", color:"#64748b", fontSize:12, cursor:"pointer" }}>すべて既読</button>
+              <button onClick={async () => {
+                const unreadNotifs = notifications.filter(n => !n.read);
+                await Promise.all(
+                  unreadNotifs.map(n => updateDoc(doc(db, "notifications", n.id), { read: true }))
+                );
+              }} style={{ background:"none", border:"none", color:"#64748b", fontSize:12, cursor:"pointer" }}>
+                すべて既読
+              </button>
             </div>
             <div style={{ flex:1, overflowY:"auto" }}>
               {notifications.length === 0 && <div style={{ textAlign:"center", color:"#475569", padding:"40px 0", fontSize:13 }}>通知はありません</div>}
@@ -910,14 +919,35 @@ export default function FamilyTodo() {
                 </div>
               </div>
 
-              {/* Notify time */}
+              {/* Notify */}
               <div>
-                <div style={{ fontSize:12, color:"#64748b", marginBottom:6 }}>⏰ 通知時刻</div>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <input type="time" value={draft.notifyTime||"08:00"}
-                    onChange={e => setDraft(d=>({...d,notifyTime:e.target.value}))}
-                    style={{...iStyle, background:"#1e293b", flex:1}}/>
-                  <span style={{ fontSize:12, color:"#64748b", whiteSpace:"nowrap" }}>に通知</span>
+                <div style={{ fontSize:12, color:"#64748b", marginBottom:6 }}>⏰ 通知</div>
+                <div style={{ background:"#1e293b", borderRadius:12, padding:"12px 14px", border:"1px solid #334155" }}>
+                  {/* トグル */}
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: draft.notifyEnabled ? 12 : 0 }}>
+                    <span style={{ fontSize:14, color:"#e2e8f0" }}>通知を受け取る</span>
+                    <div onClick={() => setDraft(d => ({ ...d, notifyEnabled: !d.notifyEnabled }))} style={{
+                      width:44, height:26, borderRadius:13, cursor:"pointer",
+                      background: draft.notifyEnabled ? "#ffa94d" : "#334155",
+                      position:"relative", transition:"background 0.2s"
+                    }}>
+                      <div style={{
+                        position:"absolute", top:3,
+                        left: draft.notifyEnabled ? 21 : 3,
+                        width:20, height:20, borderRadius:"50%",
+                        background:"#fff", transition:"left 0.2s"
+                      }}/>
+                    </div>
+                  </div>
+                  {/* 時刻選択（通知ONのときだけ表示） */}
+                  {draft.notifyEnabled && (
+                    <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                      <input type="time" value={draft.notifyTime||"08:00"}
+                        onChange={e => setDraft(d=>({...d,notifyTime:e.target.value}))}
+                        style={{...iStyle, background:"#0f172a", flex:1}}/>
+                      <span style={{ fontSize:12, color:"#64748b", whiteSpace:"nowrap" }}>に通知</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
