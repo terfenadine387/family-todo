@@ -8,6 +8,7 @@ import {
   deleteDoc,
   doc,
   setDoc,
+  getDocs,
   serverTimestamp,
 } from "firebase/firestore";
 import {
@@ -462,18 +463,18 @@ export default function FamilyTodo() {
         logs.push(`トークン: ${token ? token.slice(0, 20) + "..." : "なし"}`);
 
         if (token) {
-          // トークン自体をIDとして使う（同じ端末は必ず同じIDになる）
-          const tokenId = token.slice(-20); // トークンの末尾20文字をIDに
-          await setDoc(
-            doc(db, "members", currentUser, "tokens", tokenId),
-            {
-              fcmToken: token,
-              updatedAt: serverTimestamp(),
-              userAgent: navigator.userAgent,
-            },
-            { merge: true }
-          );
-          console.log("トークン保存完了:", tokenId);
+          // まず既存トークンを全削除してから保存
+          const tokensRef = collection(db, "members", currentUser, "tokens");
+          const existing = await getDocs(tokensRef);
+          await Promise.all(existing.docs.map(d => deleteDoc(d.ref)));
+          
+          // 新しく保存
+          await addDoc(tokensRef, {
+            fcmToken: token,
+            updatedAt: serverTimestamp(),
+            userAgent: navigator.userAgent,
+          });
+          console.log("トークン保存完了");
         }
 
       } catch (err) {
@@ -511,7 +512,7 @@ export default function FamilyTodo() {
 
   const [scopeDialog, setScopeDialog] = useState(null);
 
-  const unread = notifications.filter(n => !n.read).length;
+  const unread = notifications.filter(n => !n.read && n.from !== currentUser).length;
 
   const selDateObj = parseYMD(selectedDate);
   const M = selDateObj.getMonth() + 1;
@@ -855,21 +856,23 @@ export default function FamilyTodo() {
             </div>
             <div style={{ flex:1, overflowY:"auto" }}>
               {notifications.length === 0 && <div style={{ textAlign:"center", color:"#475569", padding:"40px 0", fontSize:13 }}>通知はありません</div>}
-              {notifications.map(n => {
-                const from = MEMBERS.find(m => m.id === n.from);
-                return (
-                  <div key={n.id} style={{ padding:"12px 20px", background:n.read?"transparent":"#1e293b", borderBottom:"1px solid #1e293b22", display:"flex", gap:10, alignItems:"flex-start" }}>
-                    <span style={{ fontSize:22 }}>{from?.emoji}</span>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, marginBottom:2 }}>
-                        <span style={{ color:from?.color, fontWeight:600 }}>{from?.name}</span>
-                        <span style={{ color:"#94a3b8" }}>が「<span style={{ color:"#e2e8f0" }}>{n.todoTitle}</span>」を完了！</span>
+              {notifications
+                .filter(n => n.from !== currentUser)
+                .map(n => {
+                  const from = MEMBERS.find(m => m.id === n.from);
+                  return (
+                    <div key={n.id} style={{ padding:"12px 20px", background:n.read?"transparent":"#1e293b", borderBottom:"1px solid #1e293b22", display:"flex", gap:10, alignItems:"flex-start" }}>
+                      <span style={{ fontSize:22 }}>{from?.emoji}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, marginBottom:2 }}>
+                          <span style={{ color:from?.color, fontWeight:600 }}>{from?.name}</span>
+                          <span style={{ color:"#94a3b8" }}>が「<span style={{ color:"#e2e8f0" }}>{n.todoTitle}</span>」を完了！</span>
+                        </div>
+                        <div style={{ fontSize:11, color:"#475569" }}>{n.time}</div>
                       </div>
-                      <div style={{ fontSize:11, color:"#475569" }}>{n.time}</div>
+                      {!n.read && <div style={{ width:8, height:8, borderRadius:"50%", background:"#ff4757", marginTop:4 }}/>}
                     </div>
-                    {!n.read && <div style={{ width:8, height:8, borderRadius:"50%", background:"#ff4757", marginTop:4 }}/>}
-                  </div>
-                );
+                  );
               })}
             </div>
           </div>
