@@ -402,6 +402,7 @@ export default function FamilyTodo() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("familyTodoUser") || null);
   const [debugLog, setDebugLog] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
 
   // Firestoreリアルタイム同期
   useEffect(() => {
