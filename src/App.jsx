@@ -527,8 +527,20 @@ export default function FamilyTodo() {
       ? dates.filter((d) => d !== selectedDate)
       : [...dates, selectedDate];
 
+    // 完了時刻を記録
+    const completedTimes = todo.completedTimes || {};
+    if (!already) {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      completedTimes[selectedDate] = `${hh}:${mm}`;
+    } else {
+      delete completedTimes[selectedDate];
+    }
+
     await updateDoc(doc(db, "todos", todo.id), {
       completedDates: next,
+      completedTimes,
     });
 
     if (!already) {
@@ -536,7 +548,7 @@ export default function FamilyTodo() {
         type: "complete",
         from: currentUser,
         todoTitle: todo.title,
-        time: "たった今",
+        time: completedTimes[selectedDate],
         read: false,
         createdAt: serverTimestamp(),
       });
@@ -761,53 +773,70 @@ export default function FamilyTodo() {
           return (
             <div key={`${todo.id}-${selectedDate}`} style={{
               background:"#1e293b", borderRadius:18, marginBottom:10,
-              border:`1px solid ${done ? "#1e293b" : "#334155"}`,
-              display:"flex", alignItems:"center", gap:12,
-              padding:"14px 14px",
-              animation:`fadeIn 0.25s ease ${i*0.05}s both`,
+              border:`1px solid ${done ? "#1e293b" : expandedId === todo.id ? am.color+"55" : "#334155"}`,
               opacity: done ? 0.5 : 1,
-              transition:"opacity 0.2s"
+              animation:`fadeIn 0.25s ease ${i*0.05}s both`,
+              overflow:"hidden", transition:"all 0.2s"
             }}>
-              {/* Icon / checkbox area */}
-              <div onClick={() => toggleComplete(todo)} style={{
-                width:44, height:44, borderRadius:12, flexShrink:0, cursor:"pointer",
-                background: done ? am.color : am.color + "22",
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:20, transition:"all 0.2s",
-                border:`2px solid ${done ? am.color : am.color + "55"}`
-              }}>
-                {done ? "✓" : am.emoji}
-              </div>
-
-              {/* Text */}
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{
-                  fontWeight:600, fontSize:15,
-                  textDecoration: done ? "line-through" : "none",
-                  color: done ? "#475569" : "#f1f5f9",
-                  whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"
-                }}>{todo.title}</div>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:4, flexWrap:"wrap" }}>
-                  <span style={{ fontSize:11, background:am.color+"22", color:am.color, padding:"2px 8px", borderRadius:10 }}>
-                    {getRepeatLabel(todo)}
-                  </span>
-                  {todo.notifyEnabled && todo.notifyTime && <span style={{ fontSize:11, color:"#64748b" }}>⏰ {todo.notifyTime}</span>}
-                  {memberFilter === "all" && <span style={{ fontSize:11, color:"#64748b" }}>{am.emoji} {am.name}</span>}
+              {/* メインrow */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 14px" }}
+                onClick={() => setExpandedId(expandedId === todo.id ? null : todo.id)}>
+                
+                {/* チェックボックス */}
+                <div onClick={e => { e.stopPropagation(); toggleComplete(todo); }} style={{
+                  width:44, height:44, borderRadius:12, flexShrink:0, cursor:"pointer",
+                  background: done ? am.color : am.color + "22",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:20, transition:"all 0.2s",
+                  border:`2px solid ${done ? am.color : am.color + "55"}`
+                }}>
+                  {done ? "✓" : am.emoji}
                 </div>
-                {todo.memo ? <div style={{ fontSize:12, color:"#64748b", marginTop:3 }}>{todo.memo}</div> : null}
+
+                {/* テキスト */}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{
+                    fontWeight:600, fontSize:15,
+                    textDecoration: done ? "line-through" : "none",
+                    color: done ? "#475569" : "#f1f5f9",
+                    whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"
+                  }}>{todo.title}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                    <span style={{ fontSize:11, background:am.color+"22", color:am.color, padding:"2px 8px", borderRadius:10 }}>
+                      {getRepeatLabel(todo)}
+                    </span>
+                    {todo.notifyEnabled && todo.notifyTime && (
+                      <span style={{ fontSize:11, color:"#64748b" }}>⏰ {todo.notifyTime}</span>
+                    )}
+                    {done && todo.completedTimes?.[selectedDate] && (
+                      <span style={{ fontSize:11, color:"#22c55e" }}>✓ {todo.completedTimes[selectedDate]}完了</span>
+                    )}
+                    {memberFilter === "all" && (
+                      <span style={{ fontSize:11, color:"#64748b" }}>{am.emoji} {am.name}</span>
+                    )}
+                  </div>
+                  {todo.memo ? <div style={{ fontSize:12, color:"#64748b", marginTop:3 }}>{todo.memo}</div> : null}
+                </div>
+
+                {/* 矢印 */}
+                <span style={{ color:"#475569", fontSize:12, flexShrink:0 }}>
+                  {expandedId === todo.id ? "▲" : "▼"}
+                </span>
               </div>
 
-              {/* Actions */}
-              <div style={{ display:"flex", flexDirection:"column", gap:6, flexShrink:0 }}>
-                <button onClick={() => openEdit(todo)} style={{
-                  width:32, height:32, borderRadius:10, border:"none",
-                  background:"#0f172a", color:"#94a3b8", cursor:"pointer", fontSize:14
-                }}>✏️</button>
-                <button onClick={() => handleDelete(todo)} style={{
-                  width:32, height:32, borderRadius:10, border:"none",
-                  background:"#0f172a", color:"#94a3b8", cursor:"pointer", fontSize:14
-                }}>🗑</button>
-              </div>
+              {/* 展開時のアクションボタン */}
+              {expandedId === todo.id && (
+                <div style={{ borderTop:"1px solid #334155", padding:"10px 14px", display:"flex", gap:8 }}>
+                  <button onClick={() => { openEdit(todo); setExpandedId(null); }} style={{
+                    flex:1, padding:"8px 0", borderRadius:10, border:"none",
+                    background: am.color+"22", color:am.color, fontWeight:600, fontSize:13, cursor:"pointer"
+                  }}>✏️ 編集</button>
+                  <button onClick={() => { handleDelete(todo); setExpandedId(null); }} style={{
+                    flex:1, padding:"8px 0", borderRadius:10, border:"none",
+                    background:"#ff475722", color:"#ff4757", fontWeight:600, fontSize:13, cursor:"pointer"
+                  }}>🗑 削除</button>
+                </div>
+              )}
             </div>
           );
         })}

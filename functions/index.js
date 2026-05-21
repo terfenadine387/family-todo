@@ -10,7 +10,7 @@ const nameMap = {
   shiko: "しこう",
 };
 
-// ── 完了通知（既存） ──────────────────────────────────────
+// ── 完了通知 ──────────────────────────────────────────────
 exports.sendNotificationOnComplete = onDocumentCreated(
   "notifications/{docId}",
   async (event) => {
@@ -22,32 +22,27 @@ exports.sendNotificationOnComplete = onDocumentCreated(
     const todoTitle = data.todoTitle;
     const senderName = nameMap[senderId] || "誰か";
 
-    const payload = {
-      notification: {
-        title: "タスク完了！",
-        body: `${senderName}が「${todoTitle}」を完了しました✅`,
-      },
-      apns: {
-        payload: { aps: { sound: "default" } },
-      },
-    };
-
     const membersSnap = await admin.firestore().collection("members").get();
-    const members = {};
+    const tokens = [];
     membersSnap.forEach((doc) => {
-      const memberData = doc.data();
-      if (doc.id !== senderId && memberData.fcmToken) {
-        tokens.push(memberData.fcmToken);
+      if (doc.id !== senderId && doc.data().fcmToken) {
+        tokens.push(doc.data().fcmToken);
       }
     });
 
-    if (tokens.length === 0) return;
+    if (tokens.length === 0) {
+      console.log("送信先トークンなし");
+      return;
+    }
 
     try {
       const response = await admin.messaging().sendEachForMulticast({
         tokens,
-        notification: payload.notification,
-        apns: payload.apns,
+        notification: {
+          title: "タスク完了！",
+          body: `${senderName}が「${todoTitle}」を完了しました✅`,
+        },
+        apns: { payload: { aps: { sound: "default" } } },
       });
       console.log("完了通知送信:", response.successCount, "件");
     } catch (error) {
@@ -56,7 +51,7 @@ exports.sendNotificationOnComplete = onDocumentCreated(
   }
 );
 
-// ── 時刻通知（新規）─────────────────────────────────────
+// ── 時刻通知 ──────────────────────────────────────────────
 exports.sendScheduledNotifications = onSchedule(
   {
     schedule: "every 1 minutes",
@@ -64,12 +59,8 @@ exports.sendScheduledNotifications = onSchedule(
     region: "asia-northeast1",
   },
   async () => {
-const now = new Date();
-
-    // 日本時間に変換
-    const jstOffset = 9 * 60; // 分
-    const jstNow = new Date(now.getTime() + jstOffset * 60 * 1000);
-
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
     const hh = String(jstNow.getUTCHours()).padStart(2, "0");
     const mm = String(jstNow.getUTCMinutes()).padStart(2, "0");
     const currentTime = `${hh}:${mm}`;
@@ -77,33 +68,35 @@ const now = new Date();
 
     console.log(`実行時刻(JST): ${currentTime} / ${todayStr}`);
 
-    console.log(`時刻通知チェック: ${currentTime} / ${todayStr}`);
-
+    // todos取得
     const todosSnap = await admin.firestore().collection("todos").get();
     const todos = todosSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // 変更後：端末ごとのトークンをすべて取得
+    // メンバーのトークンを取得（直接fcmToken方式）
     const membersSnap = await admin.firestore().collection("members").get();
-    const members = {}; // { dad: ["token1", "token2"], mom: ["token3"] }
-
-    for (const memberDoc of membersSnap.docs) {
-      const tokensSnap = await memberDoc.ref.collection("tokens").get();
-      const tokens = tokensSnap.docs.map(t => t.data().fcmToken).filter(Boolean);
-      if (tokens.length > 0) {
-        members[memberDoc.id] = tokens;
+    const members = {};
+    membersSnap.forEach((d) => {
+      if (d.data().fcmToken) {
+        members[d.id] = d.data().fcmToken;
       }
-    }
+    });
+
+    console.log("取得メンバー:", Object.keys(members));
 
     for (const todo of todos) {
       if (todo.notifyTime !== currentTime) continue;
-      if (!todo.notifyEnabled) continue;
+      if (todo.notifyEnabled === false) continue;
       if (!occursOn(todo, todayStr)) continue;
       if ((todo.completedDates || []).includes(todayStr)) continue;
 
       const token = members[todo.assignee];
-      if (!token) continue;
+      if (!token) {
+        console.log(`トークンなし: ${todo.assignee}`);
+        continue;
+      }
 
       const assigneeName = nameMap[todo.assignee] || todo.assignee;
+      console.log(`通知送信試行: ${todo.title} → ${todo.assignee}`);
 
       try {
         await admin.messaging().send({
@@ -112,18 +105,14 @@ const now = new Date();
             title: "⏰ やることリマインダー",
             body: `${assigneeName}、「${todo.title}」の時間です！`,
           },
-          apns: {
-            payload: { aps: { sound: "default" } },
-          },
+          apns: { payload: { aps: { sound: "default" } } },
           webpush: {
-            fcmOptions: {
-              link: "https://family-todo-six.vercel.app",
-            },
+            fcmOptions: { link: "https://family-todo-six.vercel.app" },
           },
         });
-        console.log(`時刻通知送信: ${todo.title} → ${todo.assignee}`);
+        console.log(`時刻通知送信成功: ${todo.title} → ${todo.assignee}`);
       } catch (err) {
-        console.error(`時刻通知失敗:`, err.message);
+        console.error(`時刻通知失敗: ${todo.title}`, err.message);
       }
     }
   }
