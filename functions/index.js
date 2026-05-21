@@ -33,15 +33,13 @@ exports.sendNotificationOnComplete = onDocumentCreated(
     };
 
     const membersSnap = await admin.firestore().collection("members").get();
-    const tokens = [];
-    for (const memberDoc of membersSnap.docs) {
-      if (memberDoc.id === senderId) continue;
-      const tokensSnap = await memberDoc.ref.collection("tokens").get();
-      tokensSnap.docs.forEach(t => {
-        const token = t.data().fcmToken;
-        if (token) tokens.push(token);
-      });
-    }
+    const members = {};
+    membersSnap.forEach((doc) => {
+      const memberData = doc.data();
+      if (doc.id !== senderId && memberData.fcmToken) {
+        tokens.push(memberData.fcmToken);
+      }
+    });
 
     if (tokens.length === 0) return;
 
@@ -102,14 +100,14 @@ const now = new Date();
       if (!occursOn(todo, todayStr)) continue;
       if ((todo.completedDates || []).includes(todayStr)) continue;
 
-      const tokens = members[todo.assignee];
-      if (!tokens || tokens.length === 0) continue;
+      const token = members[todo.assignee];
+      if (!token) continue;
 
       const assigneeName = nameMap[todo.assignee] || todo.assignee;
 
       try {
-        await admin.messaging().sendEachForMulticast({
-          tokens,
+        await admin.messaging().send({
+          token,
           notification: {
             title: "⏰ やることリマインダー",
             body: `${assigneeName}、「${todo.title}」の時間です！`,
@@ -123,9 +121,9 @@ const now = new Date();
             },
           },
         });
-        console.log(`時刻通知送信: ${todo.title} → ${todo.assignee} (${tokens.length}台)`);
+        console.log(`時刻通知送信: ${todo.title} → ${todo.assignee}`);
       } catch (err) {
-        console.error(`時刻通知失敗: ${todo.title}`, err.message);
+        console.error(`時刻通知失敗:`, err.message);
       }
     }
   }

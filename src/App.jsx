@@ -463,17 +463,10 @@ export default function FamilyTodo() {
         logs.push(`トークン: ${token ? token.slice(0, 20) + "..." : "なし"}`);
 
         if (token) {
-          // まず既存トークンを全削除してから保存
-          const tokensRef = collection(db, "members", currentUser, "tokens");
-          const existing = await getDocs(tokensRef);
-          await Promise.all(existing.docs.map(d => deleteDoc(d.ref)));
-          
-          // 新しく保存
-          await addDoc(tokensRef, {
+          await setDoc(doc(db, "members", currentUser), {
             fcmToken: token,
             updatedAt: serverTimestamp(),
-            userAgent: navigator.userAgent,
-          });
+          }, { merge: true });
           console.log("トークン保存完了");
         }
 
