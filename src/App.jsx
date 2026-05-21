@@ -8,7 +8,6 @@ import {
   deleteDoc,
   doc,
   setDoc,
-  getDocs,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -24,18 +23,17 @@ const WEEKDAYS_JP = ["月","火","水","木","金","土","日"];
 const MONTH_WEEK_POS = ["第1","第2","第3","第4","最終"];
 
 const REPEAT_TYPES = [
-  { v: "once",             l: "一度だけ" },
-  { v: "daily",            l: "毎日" },
-  { v: "weekly",           l: "毎週" },
-  { v: "monthly_date",     l: "毎月（日付）" },
-  { v: "monthly_weekday",  l: "毎月（曜日）" },
-  { v: "yearly",           l: "毎年" },
-  { v: "custom",           l: "カスタム" },
+  { v: "once",            l: "一度だけ" },
+  { v: "daily",           l: "毎日" },
+  { v: "weekly",          l: "毎週" },
+  { v: "monthly_date",    l: "毎月（日付）" },
+  { v: "monthly_weekday", l: "毎月（曜日）" },
+  { v: "yearly",          l: "毎年" },
+  { v: "custom",          l: "カスタム" },
 ];
 
 // ── Helpers ────────────────────────────────────────────────
 function toYMD(date) {
-  // 日本時間基準で YYYY-MM-DD を返す
   const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
   return jst.toISOString().slice(0, 10);
 }
@@ -47,7 +45,7 @@ function weekdayIndex(date) {
   return (date.getDay() + 6) % 7;
 }
 function nthWeekdayOfMonth(date) {
-  return Math.ceil(date.getDate() / 7) - 1; // 0-based
+  return Math.ceil(date.getDate() / 7) - 1;
 }
 function isLastWeekdayOfMonth(date) {
   const next = new Date(date); next.setDate(date.getDate() + 7);
@@ -134,41 +132,39 @@ const iStyle = {
   borderRadius:10, color:"#e2e8f0", fontSize:14, colorScheme:"dark",
 };
 
+// ── Sub-components ─────────────────────────────────────────
 function MemberSelect({ onSelect }) {
-  // ★ボタンを押した瞬間に通知許可を出す（デフォルト時のみ）
   const handleSelect = async (id) => {
     if (typeof Notification !== "undefined" && Notification.requestPermission) {
-      if (Notification.permission === "default") {
-        try { await Notification.requestPermission(); } catch (e) {}
-      }
+      try { await Notification.requestPermission(); } catch (e) {}
     }
     onSelect(id);
   };
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#0f172a",
-      display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      padding: "40px 20px",
-      fontFamily: "'Noto Sans JP','Hiragino Sans',sans-serif",
+      minHeight:"100vh", background:"#0f172a",
+      display:"flex", flexDirection:"column",
+      alignItems:"center", justifyContent:"center",
+      padding:"40px 20px",
+      fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif",
     }}>
-      <div style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", marginBottom: 8 }}>
+      <div style={{ fontSize:28, fontWeight:800, color:"#f1f5f9", marginBottom:8 }}>
         👨‍👩‍👦 家族のやること
       </div>
-      <div style={{ fontSize: 14, color: "#64748b", marginBottom: 48 }}>
+      <div style={{ fontSize:14, color:"#64748b", marginBottom:48 }}>
         だれですか？
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%", maxWidth: 280 }}>
+      <div style={{ display:"flex", flexDirection:"column", gap:16, width:"100%", maxWidth:280 }}>
         {MEMBERS.filter(m => m.id !== "all").map(m => (
           <button key={m.id} onClick={() => handleSelect(m.id)} style={{
-            padding: "20px 24px", borderRadius: 20, border: `2px solid ${m.color}44`,
-            background: m.color + "11", color: "#f1f5f9", fontSize: 18, fontWeight: 700,
-            cursor: "pointer", display: "flex", alignItems: "center", gap: 16, transition: "all 0.18s",
+            padding:"20px 24px", borderRadius:20, border:`2px solid ${m.color}44`,
+            background:m.color+"11", color:"#f1f5f9", fontSize:18, fontWeight:700,
+            cursor:"pointer", display:"flex", alignItems:"center", gap:16,
           }}>
-            <span style={{ fontSize: 36 }}>{m.emoji}</span>
+            <span style={{ fontSize:36 }}>{m.emoji}</span>
             <span>{m.name}</span>
-            <span style={{ marginLeft: "auto", fontSize: 12, color: m.color, background: m.color + "22", padding: "4px 12px", borderRadius: 20 }}>タップ</span>
+            <span style={{ marginLeft:"auto", fontSize:12, color:m.color, background:m.color+"22", padding:"4px 12px", borderRadius:20 }}>タップ</span>
           </button>
         ))}
       </div>
@@ -181,8 +177,10 @@ function Toast({ msg, onClose }) {
   return (
     <div style={{
       position:"fixed", top:20, left:"50%", transform:"translateX(-50%)",
-      background:"#1e293b", color:"#fff", padding:"12px 20px", borderRadius:14, fontSize:14, zIndex:9999,
-      boxShadow:"0 8px 32px #0008", border:"1px solid #334155", display:"flex", alignItems:"center", gap:8,
+      background:"#1e293b", color:"#fff", padding:"12px 20px",
+      borderRadius:14, fontSize:14, zIndex:9999,
+      boxShadow:"0 8px 32px #0008", border:"1px solid #334155",
+      display:"flex", alignItems:"center", gap:8,
       animation:"slideDown 0.3s ease", whiteSpace:"nowrap"
     }}>🔔 {msg}</div>
   );
@@ -211,8 +209,10 @@ function RepeatEditor({ draft, setDraft, color }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
         {REPEAT_TYPES.map(r => (
           <button key={r.v} onClick={() => set({ repeat:r.v })} style={{
-            padding:"9px 0", borderRadius:10, border:`1px solid ${draft.repeat === r.v ? color : "#334155"}`,
-            background: draft.repeat === r.v ? color : "#0f172a", color: draft.repeat === r.v ? "#fff" : "#64748b",
+            padding:"9px 0", borderRadius:10,
+            border:`1px solid ${draft.repeat === r.v ? color : "#334155"}`,
+            background: draft.repeat === r.v ? color : "#0f172a",
+            color: draft.repeat === r.v ? "#fff" : "#64748b",
             fontWeight: draft.repeat === r.v ? 700 : 400, fontSize:13, cursor:"pointer"
           }}>{r.l}</button>
         ))}
@@ -230,8 +230,10 @@ function RepeatEditor({ draft, setDraft, color }) {
                   const cur = draft.weekdays||[];
                   set({ weekdays: sel ? cur.filter(x=>x!==i) : [...cur,i].sort() });
                 }} style={{
-                  flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${sel?ac:"#334155"}`,
-                  background: sel?ac:"#0f172a", color: sel?"#fff":i===5?"#60a5fa":i===6?"#f87171":"#94a3b8",
+                  flex:1, padding:"8px 0", borderRadius:10,
+                  border:`1px solid ${sel?ac:"#334155"}`,
+                  background: sel?ac:"#0f172a",
+                  color: sel?"#fff":i===5?"#60a5fa":i===6?"#f87171":"#94a3b8",
                   fontSize:13, fontWeight:sel?700:400, cursor:"pointer"
                 }}>{d}</button>
               );
@@ -246,8 +248,10 @@ function RepeatEditor({ draft, setDraft, color }) {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4 }}>
             {Array.from({length:31},(_,i)=>i+1).map(d => (
               <button key={d} onClick={()=>set({monthDay:d})} style={{
-                padding:"7px 0", borderRadius:8, border:`1px solid ${draft.monthDay===d?color:"#334155"}`,
-                background: draft.monthDay===d?color:"#0f172a", color: draft.monthDay===d?"#fff":"#64748b",
+                padding:"7px 0", borderRadius:8,
+                border:`1px solid ${draft.monthDay===d?color:"#334155"}`,
+                background: draft.monthDay===d?color:"#0f172a",
+                color: draft.monthDay===d?"#fff":"#64748b",
                 fontSize:12, fontWeight:draft.monthDay===d?700:400, cursor:"pointer"
               }}>{d}</button>
             ))}
@@ -262,8 +266,10 @@ function RepeatEditor({ draft, setDraft, color }) {
             <div style={{ display:"flex", gap:5 }}>
               {MONTH_WEEK_POS.map((p,i) => (
                 <button key={i} onClick={()=>set({monthWeekPos:i})} style={{
-                  flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${draft.monthWeekPos===i?color:"#334155"}`,
-                  background: draft.monthWeekPos===i?color:"#0f172a", color: draft.monthWeekPos===i?"#fff":"#64748b",
+                  flex:1, padding:"8px 0", borderRadius:10,
+                  border:`1px solid ${draft.monthWeekPos===i?color:"#334155"}`,
+                  background: draft.monthWeekPos===i?color:"#0f172a",
+                  color: draft.monthWeekPos===i?"#fff":"#64748b",
                   fontSize:12, fontWeight:draft.monthWeekPos===i?700:400, cursor:"pointer"
                 }}>{p}</button>
               ))}
@@ -274,8 +280,10 @@ function RepeatEditor({ draft, setDraft, color }) {
             <div style={{ display:"flex", gap:5 }}>
               {WEEKDAYS_JP.map((d,i) => (
                 <button key={i} onClick={()=>set({monthWeekDay:i})} style={{
-                  flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${draft.monthWeekDay===i?color:"#334155"}`,
-                  background: draft.monthWeekDay===i?color:"#0f172a", color: draft.monthWeekDay===i?"#fff":i===5?"#60a5fa":i===6?"#f87171":"#94a3b8",
+                  flex:1, padding:"8px 0", borderRadius:10,
+                  border:`1px solid ${draft.monthWeekDay===i?color:"#334155"}`,
+                  background: draft.monthWeekDay===i?color:"#0f172a",
+                  color: draft.monthWeekDay===i?"#fff":i===5?"#60a5fa":i===6?"#f87171":"#94a3b8",
                   fontSize:12, fontWeight:draft.monthWeekDay===i?700:400, cursor:"pointer"
                 }}>{d}</button>
               ))}
@@ -301,8 +309,10 @@ function RepeatEditor({ draft, setDraft, color }) {
             <div style={{ display:"flex", gap:6, flex:1 }}>
               {[{v:"day",l:"日ごと"},{v:"week",l:"週ごと"},{v:"month",l:"月ごと"}].map(u=>(
                 <button key={u.v} onClick={()=>set({customUnit:u.v})} style={{
-                  flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${draft.customUnit===u.v?color:"#334155"}`,
-                  background: draft.customUnit===u.v?color:"#0f172a", color: draft.customUnit===u.v?"#fff":"#64748b",
+                  flex:1, padding:"8px 0", borderRadius:10,
+                  border:`1px solid ${draft.customUnit===u.v?color:"#334155"}`,
+                  background: draft.customUnit===u.v?color:"#0f172a",
+                  color: draft.customUnit===u.v?"#fff":"#64748b",
                   fontSize:12, fontWeight:draft.customUnit===u.v?700:400, cursor:"pointer"
                 }}>{u.l}</button>
               ))}
@@ -334,13 +344,11 @@ function HorizontalCalendar({ selectedDate, onSelect, todos }) {
   const scrollRef = useRef(null);
   const today = new Date();
 
-  // Build 60-day window: 30 past … today … 29 future
   const days = Array.from({length:90}, (_,i) => {
     const d = new Date(today); d.setDate(today.getDate() - 30 + i);
     return d;
   });
 
-  // Scroll selected date into center on mount / change
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -353,7 +361,6 @@ function HorizontalCalendar({ selectedDate, onSelect, todos }) {
 
   return (
     <div ref={scrollRef} style={{ display:"flex", overflowX:"auto", gap:6, padding:"4px 20px 8px", scrollbarWidth:"none" }}>
-      <style>{`.hcal::-webkit-scrollbar{display:none}`}</style>
       {days.map(d => {
         const ymd = toYMD(d);
         const isToday = ymd === toYMD(today);
@@ -364,13 +371,20 @@ function HorizontalCalendar({ selectedDate, onSelect, todos }) {
 
         return (
           <div key={ymd} onClick={() => onSelect(ymd)} style={{ flexShrink:0, width:52, display:"flex", flexDirection:"column", alignItems:"center", gap:4, cursor:"pointer" }}>
-            <div style={{ fontSize:11, color: isSel ? "#fff" : isSat ? "#60a5fa" : isSun ? "#f87171" : "#64748b", fontWeight: isToday ? 700 : 400 }}>{WEEKDAYS_JP[wd]}</div>
+            <div style={{ fontSize:11, color: isSel?"#fff":isSat?"#60a5fa":isSun?"#f87171":"#64748b", fontWeight:isToday?700:400 }}>
+              {WEEKDAYS_JP[wd]}
+            </div>
             <div style={{
-              width:46, height:52, borderRadius:14, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4,
-              background: isSel ? "#ffa94d" : "transparent", border: isToday && !isSel ? "2px solid #ffa94d" : isSel ? "none" : "2px solid transparent", transition:"all 0.18s"
+              width:46, height:52, borderRadius:14,
+              display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4,
+              background: isSel?"#ffa94d":"transparent",
+              border: isToday&&!isSel?"2px solid #ffa94d":isSel?"none":"2px solid transparent",
+              transition:"all 0.18s"
             }}>
-              <span style={{ fontSize:20, fontWeight:700, color: isSel ? "#fff" : isSat ? "#60a5fa" : isSun ? "#f87171" : "#e2e8f0" }}>{d.getDate()}</span>
-              <div style={{ width:5, height:5, borderRadius:"50%", background: hasTodo ? (isSel ? "#fff" : "#ffa94d") : "transparent" }}/>
+              <span style={{ fontSize:20, fontWeight:700, color:isSel?"#fff":isSat?"#60a5fa":isSun?"#f87171":"#e2e8f0" }}>
+                {d.getDate()}
+              </span>
+              <div style={{ width:5, height:5, borderRadius:"50%", background:hasTodo?(isSel?"#fff":"#ffa94d"):"transparent" }}/>
             </div>
           </div>
         );
@@ -382,27 +396,31 @@ function HorizontalCalendar({ selectedDate, onSelect, todos }) {
 // ── Main App ───────────────────────────────────────────────
 function emptyDraft(selectedDate) {
   return {
-    title:"", memo:"", assignee:"shiko", repeat:"daily", weekdays:[], monthDay:1, monthWeekPos:0, monthWeekDay:0,
+    title:"", memo:"", assignee:"shiko",
+    repeat:"daily", weekdays:[], monthDay:1, monthWeekPos:0, monthWeekDay:0,
     yearDate:"", customInterval:1, customUnit:"day",
-    notifyEnabled: false, // ← 追加（デフォルト通知なし）
-    notifyTime:"08:00", startDate: selectedDate, endDate:"", completedDates:[], skippedDates:[],
+    notifyEnabled:false, notifyTime:"08:00",
+    startDate:selectedDate, endDate:"",
+    completedDates:[], completedTimes:{}, skippedDates:[],
   };
 }
 
 export default function FamilyTodo() {
-  const [todos, setTodos]           = useState([]);
+  const [todos, setTodos]               = useState([]);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [memberFilter, setMemberFilter] = useState("all");
-  const [showModal, setShowModal]   = useState(false);
-  const [editingId, setEditingId]   = useState(null);
-  const [draft, setDraft]           = useState(emptyDraft(TODAY));
-  const [toast, setToast]           = useState(null);
+  const [showModal, setShowModal]       = useState(false);
+  const [editingId, setEditingId]       = useState(null);
+  const [draft, setDraft]               = useState(emptyDraft(TODAY));
+  const [toast, setToast]               = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("familyTodoUser") || null);
-  const [debugLog, setDebugLog] = useState("");
-  const [expandedId, setExpandedId] = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [currentUser, setCurrentUser]   = useState(
+    () => localStorage.getItem("familyTodoUser") || null
+  );
+  const [expandedId, setExpandedId]     = useState(null);
+  const [scopeDialog, setScopeDialog]   = useState(null);
 
   // Firestoreリアルタイム同期
   useEffect(() => {
@@ -411,81 +429,24 @@ export default function FamilyTodo() {
       setTodos(data);
       setLoading(false);
     });
-
     const unsubNotifs = onSnapshot(collection(db, "notifications"), (snap) => {
       const data = snap.docs
         .map((d) => ({ ...d.data(), id: d.id }))
         .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setNotifications(data);
     });
-
-    return () => {
-      unsubTodos();
-      unsubNotifs();
-    };
+    return () => { unsubTodos(); unsubNotifs(); };
   }, []);
 
-  // 通知許可＆トークン取得
+  // FCMトークン登録
   useEffect(() => {
     if (!currentUser) return;
-
-    setDebugLog("useEffect発火: " + currentUser);
-
-    async function registerToken() {
-      const logs = ["開始"];
-      try {
-        const supported = await isSupported();
-        logs.push(`FCM対応: ${supported}`);
-        if (!supported) {
-          setDebugLog(logs.join("\n"));
-          return;
-        }
-
-        const perm = Notification.permission;
-        logs.push(`通知許可状態: ${perm}`);
-        
-        // ★自動で requestPermission() は呼ばず、許可されているかだけチェック
-        if (perm !== "granted") {
-          logs.push("❌ 許可されていないため処理を中断");
-          setDebugLog(logs.join("\n"));
-          return;
-        }
-
-        const m = getMessaging();
-        logs.push("messaging取得OK");
-
-        const token = await getToken(m, { vapidKey: VAPID_KEY });
-        logs.push(`トークン: ${token ? token.slice(0, 20) + "..." : "なし"}`);
-
-        if (token) {
-          await setDoc(doc(db, "members", currentUser), {
-            fcmToken: token,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-          console.log("トークン保存完了");
-        }
-
-      } catch (err) {
-        logs.push(`エラー: ${err.message}`);
-      }
-      setDebugLog(logs.join("\n"));
-    }
-
-    registerToken();
-  }, [currentUser]);
-
-  // メッセージ受信
-  useEffect(() => {
-    if (!currentUser) return;
-
     async function registerToken() {
       try {
         const { isSupported, getMessaging, getToken } = await import("firebase/messaging");
         const supported = await isSupported();
         if (!supported) return;
-
         if (Notification.permission !== "granted") return;
-
         const m = getMessaging();
         const token = await getToken(m, { vapidKey: VAPID_KEY });
         if (token) {
@@ -498,42 +459,36 @@ export default function FamilyTodo() {
         console.warn("FCM登録エラー(無視):", err);
       }
     }
-
     registerToken();
   }, [currentUser]);
 
-useEffect(() => {
-  if (!currentUser) return;
-
-  async function setupOnMessage() {
-    try {
-      const { isSupported, getMessaging, onMessage } = await import("firebase/messaging");
-      const supported = await isSupported();
-      if (!supported) return;
-      const m = getMessaging();
-      const unsub = onMessage(m, (payload) => {
-        const { title, body } = payload.notification;
-        showToast(`${title}：${body}`);
-      });
-      return unsub;
-    } catch (err) {
-      console.warn("onMessage設定エラー(無視):", err);
+  // フォアグラウンド通知受信
+  useEffect(() => {
+    if (!currentUser) return;
+    async function setupOnMessage() {
+      try {
+        const { isSupported, getMessaging, onMessage } = await import("firebase/messaging");
+        const supported = await isSupported();
+        if (!supported) return;
+        const m = getMessaging();
+        const unsub = onMessage(m, (payload) => {
+          const { title, body } = payload.notification;
+          showToast(`${title}：${body}`);
+        });
+        return unsub;
+      } catch (err) {
+        console.warn("onMessage設定エラー(無視):", err);
+      }
     }
-  }
-
-  let unsub;
-  setupOnMessage().then(fn => { unsub = fn; });
-  return () => { if (unsub) unsub(); };
-}, [currentUser]);
-
-  const [scopeDialog, setScopeDialog] = useState(null);
+    let unsub;
+    setupOnMessage().then(fn => { unsub = fn; });
+    return () => { if (unsub) unsub(); };
+  }, [currentUser]);
 
   const unread = notifications.filter(n => !n.read && n.from !== currentUser).length;
-
   const selDateObj = parseYMD(selectedDate);
   const M = selDateObj.getMonth() + 1;
   const D = selDateObj.getDate();
-
   const dayTodos = todos.filter(t => todoOccursOn(t, selectedDate));
   const visibleTodos = memberFilter === "all" ? dayTodos : dayTodos.filter(t => t.assignee === memberFilter);
 
@@ -550,7 +505,6 @@ useEffect(() => {
       ? dates.filter((d) => d !== selectedDate)
       : [...dates, selectedDate];
 
-    // 完了時刻を記録
     const completedTimes = todo.completedTimes || {};
     if (!already) {
       const now = new Date();
@@ -591,19 +545,19 @@ useEffect(() => {
         action:"edit", todo,
         onThisDay: () => {
           setScopeDialog(null);
-          setEditingId({ id: todo.id, scope:"thisDay", date: selectedDate });
-          setDraft({ ...emptyDraft(selectedDate), ...todo, startDate: selectedDate, endDate: selectedDate, repeat:"once" });
+          setEditingId({ id:todo.id, scope:"thisDay", date:selectedDate });
+          setDraft({ ...emptyDraft(selectedDate), ...todo, startDate:selectedDate, endDate:selectedDate, repeat:"once" });
           setShowModal(true);
         },
         onFromHere: () => {
           setScopeDialog(null);
-          setEditingId({ id: todo.id, scope:"fromHere", date: selectedDate });
-          setDraft({ ...emptyDraft(selectedDate), ...todo, startDate: selectedDate });
+          setEditingId({ id:todo.id, scope:"fromHere", date:selectedDate });
+          setDraft({ ...emptyDraft(selectedDate), ...todo, startDate:selectedDate });
           setShowModal(true);
         },
       });
     } else {
-      setEditingId({ id: todo.id, scope:"all" });
+      setEditingId({ id:todo.id, scope:"all" });
       setDraft({ ...emptyDraft(selectedDate), ...todo });
       setShowModal(true);
     }
@@ -612,10 +566,10 @@ useEffect(() => {
   async function handleDelete(todo) {
     if (isRecurring(todo)) {
       setScopeDialog({
-        action: "delete", todo,
+        action:"delete", todo,
         onThisDay: async () => {
           await updateDoc(doc(db, "todos", todo.id), {
-            skippedDates: [...(todo.skippedDates || []), selectedDate],
+            skippedDates: [...(todo.skippedDates||[]), selectedDate],
           });
           setScopeDialog(null);
           showToast(`「${todo.title}」この日をスキップしました`);
@@ -623,9 +577,7 @@ useEffect(() => {
         onFromHere: async () => {
           const prev = new Date(parseYMD(selectedDate));
           prev.setDate(prev.getDate() - 1);
-          await updateDoc(doc(db, "todos", todo.id), {
-            endDate: toYMD(prev),
-          });
+          await updateDoc(doc(db, "todos", todo.id), { endDate:toYMD(prev) });
           setScopeDialog(null);
           showToast(`「${todo.title}」${selectedDate}以降を削除しました`);
         },
@@ -641,43 +593,40 @@ useEffect(() => {
 
     if (editingId) {
       const { id, scope, date } = editingId;
-
       if (scope === "thisDay") {
         const orig = todos.find((t) => t.id === id);
         await updateDoc(doc(db, "todos", id), {
-          skippedDates: [...(orig.skippedDates || []), date],
+          skippedDates: [...(orig.skippedDates||[]), date],
         });
         await addDoc(collection(db, "todos"), {
-          ...draft, startDate: date, endDate: date, repeat: "once",
-          completedDates: [], skippedDates: [], createdAt: serverTimestamp(),
+          ...draft, startDate:date, endDate:date, repeat:"once",
+          completedDates:[], completedTimes:{}, skippedDates:[], createdAt:serverTimestamp(),
         });
       } else if (scope === "fromHere") {
         const prev = new Date(parseYMD(date));
         prev.setDate(prev.getDate() - 1);
-        await updateDoc(doc(db, "todos", id), {
-          endDate: toYMD(prev),
-        });
+        await updateDoc(doc(db, "todos", id), { endDate:toYMD(prev) });
         await addDoc(collection(db, "todos"), {
-          ...draft, completedDates: [], skippedDates: [], createdAt: serverTimestamp(),
+          ...draft, completedDates:[], completedTimes:{}, skippedDates:[], createdAt:serverTimestamp(),
         });
       } else {
         const orig = todos.find((t) => t.id === id);
         await updateDoc(doc(db, "todos", id), {
-          ...draft, completedDates: orig.completedDates || [], skippedDates: orig.skippedDates || [],
+          ...draft,
+          completedDates: orig.completedDates||[],
+          completedTimes: orig.completedTimes||{},
+          skippedDates: orig.skippedDates||[],
         });
       }
       showToast(`「${draft.title}」を更新しました ✏️`);
     } else {
       await addDoc(collection(db, "todos"), {
-        ...draft, completedDates: [], skippedDates: [], createdAt: serverTimestamp(),
+        ...draft, completedDates:[], completedTimes:{}, skippedDates:[], createdAt:serverTimestamp(),
       });
       showToast(`「${draft.title}」を追加しました`);
     }
-
     setShowModal(false);
   }
-
-  // ★ onerrorでの画面上書きは削除しました
 
   if (!currentUser) {
     return (
@@ -689,6 +638,7 @@ useEffect(() => {
   }
 
   const accentColor = "#ffa94d";
+  const memberObj = MEMBERS.find(m => m.id === currentUser);
 
   return (
     <div style={{
@@ -712,7 +662,7 @@ useEffect(() => {
       {toast && <Toast msg={toast} onClose={() => setToast(null)} />}
       {scopeDialog && (
         <ScopeDialog
-          title={scopeDialog.action === "edit" ? "編集の範囲" : "削除の範囲"}
+          title={scopeDialog.action==="edit" ? "編集の範囲" : "削除の範囲"}
           onThisDay={scopeDialog.onThisDay}
           onFromHere={scopeDialog.onFromHere}
           onCancel={() => setScopeDialog(null)}
@@ -732,31 +682,31 @@ useEffect(() => {
         <div style={{ display:"flex", gap:10, alignItems:"center" }}>
           <button onClick={() => setSelectedDate(TODAY)} style={{
             padding:"6px 16px", borderRadius:20,
-            background: selectedDate === TODAY ? accentColor : "#1e293b",
+            background: selectedDate===TODAY ? accentColor : "#1e293b",
             border:`1px solid ${selectedDate===TODAY ? accentColor : "#334155"}`,
-            color: selectedDate === TODAY ? "#fff" : "#94a3b8",
+            color: selectedDate===TODAY ? "#fff" : "#94a3b8",
             fontSize:13, fontWeight:600, cursor:"pointer"
           }}>今日</button>
-          {(() => {
-            const u = MEMBERS.find(m => m.id === currentUser);
-            return (
-              <button onClick={() => {
-                localStorage.removeItem("familyTodoUser");
-                setCurrentUser(null);
-              }} style={{
-                display: "flex", alignItems: "center", gap: 6,
-                background: u.color + "22", border: `1px solid ${u.color}44`,
-                borderRadius: 20, padding: "6px 12px", cursor: "pointer",
-                color: u.color, fontSize: 13, fontWeight: 600,
-              }}>
-                <span>{u.emoji}</span>
-                <span>{u.name}</span>
-              </button>
-            );
-          })()}
+          <button onClick={() => {
+            localStorage.removeItem("familyTodoUser");
+            setCurrentUser(null);
+          }} style={{
+            display:"flex", alignItems:"center", gap:6,
+            background: memberObj.color+"22",
+            border:`1px solid ${memberObj.color}44`,
+            borderRadius:20, padding:"6px 12px", cursor:"pointer",
+            color:memberObj.color, fontSize:13, fontWeight:600,
+          }}>
+            <span>{memberObj.emoji}</span>
+            <span>{memberObj.name}</span>
+          </button>
           <div style={{ position:"relative", cursor:"pointer" }} onClick={() => setShowNotifPanel(true)}>
             <div style={{ width:36, height:36, borderRadius:"50%", background:"#1e293b", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, border:"1px solid #334155" }}>🔔</div>
-            {unread > 0 && <div style={{ position:"absolute", top:-4, right:-4, background:"#ff4757", color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>{unread}</div>}
+            {unread > 0 && (
+              <div style={{ position:"absolute", top:-4, right:-4, background:"#ff4757", color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>
+                {unread}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -772,7 +722,7 @@ useEffect(() => {
           const active = memberFilter === m.id;
           return (
             <button key={m.id} onClick={() => setMemberFilter(m.id)} style={{
-              flexShrink:0, padding:"6px 16px", borderRadius:20, border:"none", cursor:"pointer",
+              flexShrink:0, padding:"6px 16px", borderRadius:20, cursor:"pointer",
               background: active ? accentColor : "#1e293b",
               color: active ? "#fff" : "#64748b",
               fontWeight: active ? 700 : 400, fontSize:13,
@@ -793,25 +743,26 @@ useEffect(() => {
         {visibleTodos.map((todo, i) => {
           const am = MEMBERS.find(m => m.id === todo.assignee) || MEMBERS[1];
           const done = isCompleted(todo);
+          const expanded = expandedId === todo.id;
           return (
             <div key={`${todo.id}-${selectedDate}`} style={{
               background:"#1e293b", borderRadius:18, marginBottom:10,
-              border:`1px solid ${done ? "#1e293b" : expandedId === todo.id ? am.color+"55" : "#334155"}`,
+              border:`1px solid ${expanded ? am.color+"55" : done ? "#1e293b" : "#334155"}`,
               opacity: done ? 0.5 : 1,
               animation:`fadeIn 0.25s ease ${i*0.05}s both`,
               overflow:"hidden", transition:"all 0.2s"
             }}>
               {/* メインrow */}
               <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 14px" }}
-                onClick={() => setExpandedId(expandedId === todo.id ? null : todo.id)}>
-                
+                onClick={() => setExpandedId(expanded ? null : todo.id)}>
+
                 {/* チェックボックス */}
                 <div onClick={e => { e.stopPropagation(); toggleComplete(todo); }} style={{
                   width:44, height:44, borderRadius:12, flexShrink:0, cursor:"pointer",
-                  background: done ? am.color : am.color + "22",
+                  background: done ? am.color : am.color+"22",
                   display:"flex", alignItems:"center", justifyContent:"center",
                   fontSize:20, transition:"all 0.2s",
-                  border:`2px solid ${done ? am.color : am.color + "55"}`
+                  border:`2px solid ${done ? am.color : am.color+"55"}`
                 }}>
                   {done ? "✓" : am.emoji}
                 </div>
@@ -843,16 +794,16 @@ useEffect(() => {
 
                 {/* 矢印 */}
                 <span style={{ color:"#475569", fontSize:12, flexShrink:0 }}>
-                  {expandedId === todo.id ? "▲" : "▼"}
+                  {expanded ? "▲" : "▼"}
                 </span>
               </div>
 
-              {/* 展開時のアクションボタン */}
-              {expandedId === todo.id && (
+              {/* 展開時アクション */}
+              {expanded && (
                 <div style={{ borderTop:"1px solid #334155", padding:"10px 14px", display:"flex", gap:8 }}>
                   <button onClick={() => { openEdit(todo); setExpandedId(null); }} style={{
                     flex:1, padding:"8px 0", borderRadius:10, border:"none",
-                    background: am.color+"22", color:am.color, fontWeight:600, fontSize:13, cursor:"pointer"
+                    background:am.color+"22", color:am.color, fontWeight:600, fontSize:13, cursor:"pointer"
                   }}>✏️ 編集</button>
                   <button onClick={() => { handleDelete(todo); setExpandedId(null); }} style={{
                     flex:1, padding:"8px 0", borderRadius:10, border:"none",
@@ -868,8 +819,7 @@ useEffect(() => {
 
       {/* ── FAB ── */}
       <button onClick={openAdd} style={{
-        position:"fixed",
-        bottom:24,
+        position:"fixed", bottom:24,
         right:"max(calc(50% - 215px + 20px), 20px)",
         width:56, height:56, borderRadius:"50%",
         background:`linear-gradient(135deg, ${accentColor}, #ff8c00)`,
@@ -878,7 +828,7 @@ useEffect(() => {
         display:"flex", alignItems:"center", justifyContent:"center"
       }}>+</button>
 
-      {/* ── Notification panel ── */}
+      {/* ── 通知パネル ── */}
       {showNotifPanel && (
         <div style={{ position:"fixed", inset:0, zIndex:200, background:"#0008" }}
           onClick={() => setShowNotifPanel(false)}>
@@ -900,7 +850,9 @@ useEffect(() => {
               </button>
             </div>
             <div style={{ flex:1, overflowY:"auto" }}>
-              {notifications.length === 0 && <div style={{ textAlign:"center", color:"#475569", padding:"40px 0", fontSize:13 }}>通知はありません</div>}
+              {notifications.filter(n => n.from !== currentUser).length === 0 && (
+                <div style={{ textAlign:"center", color:"#475569", padding:"40px 0", fontSize:13 }}>通知はありません</div>
+              )}
               {notifications
                 .filter(n => n.from !== currentUser)
                 .map(n => {
@@ -918,7 +870,7 @@ useEffect(() => {
                       {!n.read && <div style={{ width:8, height:8, borderRadius:"50%", background:"#ff4757", marginTop:4 }}/>}
                     </div>
                   );
-              })}
+                })}
             </div>
           </div>
         </div>
@@ -945,21 +897,21 @@ useEffect(() => {
 
             <div style={{ overflowY:"auto", padding:"16px 20px 40px", display:"flex", flexDirection:"column", gap:16 }}>
 
-              {/* Title */}
+              {/* タイトル */}
               <div>
                 <div style={{ fontSize:12, color:"#64748b", marginBottom:4 }}>タイトル</div>
                 <input value={draft.title} onChange={e => setDraft(d=>({...d,title:e.target.value}))}
                   placeholder="何をしますか？" style={{...iStyle, background:"#1e293b", fontSize:15}}/>
               </div>
 
-              {/* Memo */}
+              {/* メモ */}
               <div>
                 <div style={{ fontSize:12, color:"#64748b", marginBottom:4 }}>メモ（任意）</div>
                 <input value={draft.memo} onChange={e => setDraft(d=>({...d,memo:e.target.value}))}
                   placeholder="詳細を入力してください" style={{...iStyle, background:"#1e293b"}}/>
               </div>
 
-              {/* Assignee */}
+              {/* 担当 */}
               <div>
                 <div style={{ fontSize:12, color:"#64748b", marginBottom:6 }}>担当するひと</div>
                 <div style={{ display:"flex", gap:8 }}>
@@ -977,14 +929,13 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Notify */}
+              {/* 通知 */}
               <div>
                 <div style={{ fontSize:12, color:"#64748b", marginBottom:6 }}>⏰ 通知</div>
                 <div style={{ background:"#1e293b", borderRadius:12, padding:"12px 14px", border:"1px solid #334155" }}>
-                  {/* トグル */}
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: draft.notifyEnabled ? 12 : 0 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:draft.notifyEnabled?12:0 }}>
                     <span style={{ fontSize:14, color:"#e2e8f0" }}>通知を受け取る</span>
-                    <div onClick={() => setDraft(d => ({ ...d, notifyEnabled: !d.notifyEnabled }))} style={{
+                    <div onClick={() => setDraft(d=>({...d,notifyEnabled:!d.notifyEnabled}))} style={{
                       width:44, height:26, borderRadius:13, cursor:"pointer",
                       background: draft.notifyEnabled ? "#ffa94d" : "#334155",
                       position:"relative", transition:"background 0.2s"
@@ -997,7 +948,6 @@ useEffect(() => {
                       }}/>
                     </div>
                   </div>
-                  {/* 時刻選択（通知ONのときだけ表示） */}
                   {draft.notifyEnabled && (
                     <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                       <input type="time" value={draft.notifyTime||"08:00"}
@@ -1009,7 +959,7 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Schedule */}
+              {/* スケジュール */}
               <div>
                 <div style={{ fontSize:12, color:"#64748b", marginBottom:8 }}>📅 スケジュール</div>
                 <div style={{ background:"#1e293b", borderRadius:14, padding:14, border:"1px solid #334155" }}>
@@ -1017,7 +967,7 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Preview */}
+              {/* プレビュー */}
               <div style={{ background:accentColor+"11", borderRadius:12, padding:"10px 14px", border:`1px solid ${accentColor}33` }}>
                 <div style={{ fontSize:11, color:"#64748b", marginBottom:4 }}>設定プレビュー</div>
                 <div style={{ fontSize:14, color:accentColor, fontWeight:600 }}>
