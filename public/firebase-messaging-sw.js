@@ -20,6 +20,3 @@
     //     icon: "/icon-192.png",
     // });
     // });
-// firebase-messaging-sw.js を一時的にこれだけにする
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', () => self.clients.claim());
