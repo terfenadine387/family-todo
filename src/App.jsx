@@ -11,12 +11,6 @@ import {
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
-import {
-  isSupported,
-  getMessaging,
-  getToken,
-  onMessage,
-} from "firebase/messaging";
 
 // ── Constants ──────────────────────────────────────────────
 const MEMBERS = [
@@ -483,25 +477,53 @@ export default function FamilyTodo() {
   useEffect(() => {
     if (!currentUser) return;
 
-    let unsubMessage = null;
-
-    isSupported().then((supported) => {
-      if (!supported) return;
+    async function registerToken() {
       try {
-        const m = getMessaging();
-        unsubMessage = onMessage(m, (payload) => {
-          const { title, body } = payload.notification;
-          showToast(`${title}：${body}`);
-        });
-      } catch (e) {
-        console.warn("onMessage失敗:", e);
-      }
-    });
+        const { isSupported, getMessaging, getToken } = await import("firebase/messaging");
+        const supported = await isSupported();
+        if (!supported) return;
 
-    return () => {
-      if (unsubMessage) unsubMessage();
-    };
+        if (Notification.permission !== "granted") return;
+
+        const m = getMessaging();
+        const token = await getToken(m, { vapidKey: VAPID_KEY });
+        if (token) {
+          await setDoc(doc(db, "members", currentUser), {
+            fcmToken: token,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
+      } catch (err) {
+        console.warn("FCM登録エラー(無視):", err);
+      }
+    }
+
+    registerToken();
   }, [currentUser]);
+
+useEffect(() => {
+  if (!currentUser) return;
+
+  async function setupOnMessage() {
+    try {
+      const { isSupported, getMessaging, onMessage } = await import("firebase/messaging");
+      const supported = await isSupported();
+      if (!supported) return;
+      const m = getMessaging();
+      const unsub = onMessage(m, (payload) => {
+        const { title, body } = payload.notification;
+        showToast(`${title}：${body}`);
+      });
+      return unsub;
+    } catch (err) {
+      console.warn("onMessage設定エラー(無視):", err);
+    }
+  }
+
+  let unsub;
+  setupOnMessage().then(fn => { unsub = fn; });
+  return () => { if (unsub) unsub(); };
+}, [currentUser]);
 
   const [scopeDialog, setScopeDialog] = useState(null);
 
