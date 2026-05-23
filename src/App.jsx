@@ -186,45 +186,54 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
       </div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:320 }}>
-        {[{ id:"all", name:"すべて", color:"#94a3b8" }, ...members].map(m => (
-          <div key={m.id}>
-            {/* メンバーボタン */}
-            <button onClick={() => handleSelect(m.id)} style={{
-              width:"100%", padding:"20px 24px", borderRadius:"20px 20px 0 0",
-              border:`2px solid ${m.color}44`, borderBottom:"none",
-              background:m.color+"11", color:"#f1f5f9", fontSize:18, fontWeight:700,
-              cursor:"pointer", display:"flex", alignItems:"center", gap:16,
-            }}>
-              {/* アイコン */}
-              {m.imageUrl
-                ? <img src={m.imageUrl} style={{ width:44, height:44, borderRadius:12, objectFit:"cover" }}/>
-                : <span style={{ fontSize:36 }}>{m.emoji}</span>
-              }
-              <span>{m.name}</span>
-              <span style={{ marginLeft:"auto", fontSize:12, color:m.color, background:m.color+"22", padding:"4px 12px", borderRadius:20 }}>タップ</span>
-            </button>
+              {[{ id:"all", name:"すべて", color:"#94a3b8" }, ...members].map(m => (
+                <div key={m.id}>
+                  {/* メンバーボタン */}
+                  <button onClick={() => handleSelect(m.id)} style={{
+                    width:"100%", padding:"20px 24px", borderRadius:"20px 20px 0 0",
+                    border:`2px solid ${m.color}44`, borderBottom:"none",
+                    background:m.color+"11", color:"#f1f5f9", fontSize:18, fontWeight:700,
+                    cursor:"pointer", display:"flex", alignItems:"center", gap:16,
+                  }}>
+                    {/* メンバーボタン内のアイコン */}
+                    {m.imageUrl ? (
+                      <img src={m.imageUrl} style={{ width:40, height:40, borderRadius:12, objectFit:"cover" }} />
+                    ) : (
+                      <span style={{ fontSize:36 }}>{m.emoji}</span>
+                    )}
+                    <span>{m.name}</span>
+                    <span style={{ marginLeft:"auto", fontSize:12, color:m.color, background:m.color+"22", padding:"4px 12px", borderRadius:20 }}>タップ</span>
+                  </button>
 
-            {/* アイコン変更・削除ボタン */}
-            <div style={{
-              display:"flex", borderRadius:"0 0 20px 20px",
-              border:`2px solid ${m.color}44`, borderTop:"1px solid #1e293b",
-              overflow:"hidden"
-            }}>
-              {deleteConfirm === m.id ? (
-                <>
-                  <div style={{ flex:1, padding:"10px 0", background:"#1e293b", textAlign:"center", fontSize:12, color:"#94a3b8" }}>
-                    本当に削除しますか？
+                  {/* 削除ボタン */}
+                  <div style={{
+                    display:"flex", borderRadius:"0 0 20px 20px",
+                    border:`2px solid ${m.color}44`, borderTop:"1px solid #1e293b",
+                    overflow:"hidden"
+                  }}>
+                    {deleteConfirm === m.id ? (
+                      <>
+                        <div style={{ flex:1, padding:"10px 0", background:"#1e293b", textAlign:"center", fontSize:12, color:"#94a3b8" }}>
+                          本当に削除しますか？
+                        </div>
+                        <button onClick={() => { onDelete(m.id); setDeleteConfirm(null); }} style={{
+                          padding:"10px 16px", background:"#ff4757", border:"none",
+                          color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer"
+                        }}>削除</button>
+                        <button onClick={() => setDeleteConfirm(null)} style={{
+                          padding:"10px 16px", background:"#334155", border:"none",
+                          color:"#94a3b8", fontSize:12, cursor:"pointer"
+                        }}>キャンセル</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setDeleteConfirm(m.id)} style={{
+                        flex:1, padding:"10px 0", background:"#1e293b", border:"none",
+                        color:"#ff4757", fontSize:12, cursor:"pointer", fontWeight:600
+                      }}>🗑 削除</button>
+                    )}
                   </div>
-                  <button onClick={() => { onDelete(m.id); setDeleteConfirm(null); }} style={{
-                    padding:"10px 16px", background:"#ff4757", border:"none",
-                    color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer"
-                  }}>削除</button>
-                  <button onClick={() => setDeleteConfirm(null)} style={{
-                    padding:"10px 16px", background:"#334155", border:"none",
-                    color:"#94a3b8", fontSize:12, cursor:"pointer"
-                  }}>キャンセル</button>
-                </>
-              ) : (
+                </div>
+              ))}
                 <>
                   {/* アイコン変更ボタン */}
                   <label style={{
@@ -259,6 +268,7 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
               )}
             </div>
           </div>
+        ))}
         ))}
 
         {/* メンバー追加 */}
