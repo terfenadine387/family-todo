@@ -260,7 +260,6 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
             </div>
           </div>
         ))}
-        ))}
 
         {/* メンバー追加 */}
         {showAddForm ? (
