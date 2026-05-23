@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { db, VAPID_KEY } from "./firebase";
+import { db, storage, VAPID_KEY } from "./firebase";
 import {
   collection,
   onSnapshot,
@@ -9,6 +9,9 @@ import {
   doc,
   setDoc,
   serverTimestamp,
+  ref,
+  uploadBytes,
+  getDownloadURL,
 } from "firebase/firestore";
 
 // ── Constants ──────────────────────────────────────────────
@@ -139,16 +142,24 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
   const [newEmoji, setNewEmoji] = useState("👤");
   const [newColor, setNewColor] = useState("#60a5fa");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false); 
 
   const EMOJI_OPTIONS = ["👩","👨","👦","👧","👴","👵","🧑","👶","🐶","🐱","🐭","🐹"];
   const COLOR_OPTIONS = ["#ff6b9d","#4ecdc4","#ffa94d","#60a5fa","#a78bfa","#34d399","#f87171","#fb923c"];
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    await onAdd({ name: newName.trim(), emoji: newEmoji, color: newColor });
+    await onAdd({
+      name: newName.trim(),
+      emoji: newImageUrl ? "" : newEmoji,
+      imageUrl: newImageUrl || "",
+      color: newColor,
+    });
     setNewName("");
     setNewEmoji("👤");
     setNewColor("#60a5fa");
+    setNewImageUrl("");
     setShowAddForm(false);
   };
 
@@ -184,7 +195,8 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
               background:m.color+"11", color:"#f1f5f9", fontSize:18, fontWeight:700,
               cursor:"pointer", display:"flex", alignItems:"center", gap:16,
             }}>
-              <span style={{ fontSize:36 }}>{m.emoji}</span>
+              {/* メンバーボタン内のアイコン */}
+              {m.imageUrl  ? <img src={m.imageUrl} style={{ width:40, height:40, borderRadius:12, objectFit:"cover" }}/>  : <span style={{ fontSize:36 }}>{m.emoji}</span>}
               <span>{m.name}</span>
               <span style={{ marginLeft:"auto", fontSize:12, color:m.color, background:m.color+"22", padding:"4px 12px", borderRadius:20 }}>タップ</span>
             </button>
@@ -233,17 +245,71 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
                 fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif"
               }}/>
 
-            {/* 絵文字選択 */}
-            <div style={{ fontSize:11, color:"#64748b", marginBottom:6 }}>絵文字</div>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
-              {EMOJI_OPTIONS.map(e => (
-                <button key={e} onClick={() => setNewEmoji(e)} style={{
-                  width:36, height:36, borderRadius:10, border:`2px solid ${newEmoji===e?"#ffa94d":"#334155"}`,
-                  background: newEmoji===e?"#ffa94d22":"#0f172a",
-                  fontSize:20, cursor:"pointer"
-                }}>{e}</button>
-              ))}
+            {/* アイコン選択：画像 or 絵文字 */}
+            <div style={{ fontSize:11, color:"#64748b", marginBottom:6 }}>アイコン</div>
+            <div style={{ display:"flex", gap:10, marginBottom:8, alignItems:"center" }}>
+              {/* 画像プレビュー or 絵文字 */}
+              <div style={{
+                width:60, height:60, borderRadius:16,
+                background:newColor+"22", border:`2px solid ${newColor}44`,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                overflow:"hidden", flexShrink:0
+              }}>
+                {newImageUrl
+                  ? <img src={newImageUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                  : <span style={{ fontSize:32 }}>{newEmoji}</span>
+                }
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6, flex:1 }}>
+                {/* 画像アップロードボタン */}
+                <label style={{
+                  padding:"8px 12px", borderRadius:10, background:"#0f172a",
+                  border:"1px solid #334155", color:"#94a3b8", fontSize:12,
+                  cursor:"pointer", textAlign:"center", display:"block"
+                }}>
+                  📷 写真を選ぶ
+                  <input type="file" accept="image/*" style={{ display:"none" }}
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      setUploading(true);
+                      try {
+                        const storageRef = ref(storage, `members/${Date.now()}_${file.name}`);
+                        await uploadBytes(storageRef, file);
+                        const url = await getDownloadURL(storageRef);
+                        setNewImageUrl(url);
+                        setNewEmoji(""); // 絵文字をクリア
+                      } catch (err) {
+                        console.error("アップロードエラー:", err);
+                      }
+                      setUploading(false);
+                    }}
+                  />
+                </label>
+                {newImageUrl && (
+                  <button onClick={() => { setNewImageUrl(""); setNewEmoji("👤"); }} style={{
+                    padding:"6px 12px", borderRadius:10, background:"#0f172a",
+                    border:"1px solid #334155", color:"#ff4757", fontSize:11,
+                    cursor:"pointer"
+                  }}>画像を削除</button>
+                )}
+                {uploading && <div style={{ fontSize:11, color:"#64748b" }}>アップロード中...</div>}
+              </div>
             </div>
+
+            {/* 絵文字選択（画像なしの場合） */}
+            {!newImageUrl && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+                {EMOJI_OPTIONS.map(e => (
+                  <button key={e} onClick={() => setNewEmoji(e)} style={{
+                    width:36, height:36, borderRadius:10,
+                    border:`2px solid ${newEmoji===e?"#ffa94d":"#334155"}`,
+                    background: newEmoji===e?"#ffa94d22":"#0f172a",
+                    fontSize:20, cursor:"pointer"
+                  }}>{e}</button>
+                ))}
+              </div>
+            )}
 
             {/* カラー選択 */}
             <div style={{ fontSize:11, color:"#64748b", marginBottom:6 }}>カラー</div>
@@ -912,10 +978,14 @@ export default function FamilyTodo() {
                   width:44, height:44, borderRadius:12, flexShrink:0, cursor:"pointer",
                   background: done ? am.color : am.color+"22",
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:20, transition:"all 0.2s",
+                  fontSize:20, transition:"all 0.2s", overflow:"hidden",
                   border:`2px solid ${done ? am.color : am.color+"55"}`
                 }}>
-                  {done ? "✓" : am.emoji}
+                  {done ? <span style={{ fontSize:20 }}>✓</span>
+                    : am.imageUrl
+                      ? <img src={am.imageUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                      : <span>{am.emoji}</span>
+                  }
                 </div>
 
                 {/* テキスト */}
