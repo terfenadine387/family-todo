@@ -195,13 +195,16 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
               background:m.color+"11", color:"#f1f5f9", fontSize:18, fontWeight:700,
               cursor:"pointer", display:"flex", alignItems:"center", gap:16,
             }}>
-              {/* メンバーボタン内のアイコン */}
-              {m.imageUrl  ? <img src={m.imageUrl} style={{ width:40, height:40, borderRadius:12, objectFit:"cover" }}/>  : <span style={{ fontSize:36 }}>{m.emoji}</span>}
+              {/* アイコン */}
+              {m.imageUrl
+                ? <img src={m.imageUrl} style={{ width:44, height:44, borderRadius:12, objectFit:"cover" }}/>
+                : <span style={{ fontSize:36 }}>{m.emoji}</span>
+              }
               <span>{m.name}</span>
               <span style={{ marginLeft:"auto", fontSize:12, color:m.color, background:m.color+"22", padding:"4px 12px", borderRadius:20 }}>タップ</span>
             </button>
 
-            {/* 削除ボタン */}
+            {/* アイコン変更・削除ボタン */}
             <div style={{
               display:"flex", borderRadius:"0 0 20px 20px",
               border:`2px solid ${m.color}44`, borderTop:"1px solid #1e293b",
@@ -222,13 +225,41 @@ function MemberSelect({ members, onSelect, onAdd, onDelete }) {
                   }}>キャンセル</button>
                 </>
               ) : (
-                <button onClick={() => setDeleteConfirm(m.id)} style={{
-                  flex:1, padding:"10px 0", background:"#1e293b", border:"none",
-                  color:"#ff4757", fontSize:12, cursor:"pointer", fontWeight:600
-                }}>🗑 削除</button>
+                <>
+                  {/* アイコン変更ボタン */}
+                  <label style={{
+                    flex:1, padding:"10px 0", background:"#1e293b",
+                    color:"#94a3b8", fontSize:12, cursor:"pointer",
+                    fontWeight:600, textAlign:"center", display:"block"
+                  }}>
+                    📷 アイコン変更
+                    <input type="file" accept="image/*" style={{ display:"none" }}
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        try {
+                          const storageRef = ref(storage, `members/${m.id}_${Date.now()}`);
+                          await uploadBytes(storageRef, file);
+                          const url = await getDownloadURL(storageRef);
+                          await updateDoc(doc(db, "members", m.id), { imageUrl: url });
+                        } catch (err) {
+                          console.error("アップロードエラー:", err);
+                        }
+                      }}
+                    />
+                  </label>
+                  {/* 区切り */}
+                  <div style={{ width:1, background:"#334155" }}/>
+                  {/* 削除ボタン */}
+                  <button onClick={() => setDeleteConfirm(m.id)} style={{
+                    flex:1, padding:"10px 0", background:"#1e293b", border:"none",
+                    color:"#ff4757", fontSize:12, cursor:"pointer", fontWeight:600
+                  }}>🗑 削除</button>
+                </>
               )}
             </div>
           </div>
+        ))}
         ))}
 
         {/* メンバー追加 */}
