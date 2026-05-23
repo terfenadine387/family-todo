@@ -133,7 +133,25 @@ const iStyle = {
 };
 
 // ── Sub-components ─────────────────────────────────────────
-function MemberSelect({ onSelect }) {
+function MemberSelect({ members, onSelect, onAdd, onDelete }) {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmoji, setNewEmoji] = useState("👤");
+  const [newColor, setNewColor] = useState("#60a5fa");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const EMOJI_OPTIONS = ["👩","👨","👦","👧","👴","👵","🧑","👶","🐶","🐱","🐭","🐹"];
+  const COLOR_OPTIONS = ["#ff6b9d","#4ecdc4","#ffa94d","#60a5fa","#a78bfa","#34d399","#f87171","#fb923c"];
+
+  const handleAdd = async () => {
+    if (!newName.trim()) return;
+    await onAdd({ name: newName.trim(), emoji: newEmoji, color: newColor });
+    setNewName("");
+    setNewEmoji("👤");
+    setNewColor("#60a5fa");
+    setShowAddForm(false);
+  };
+
   const handleSelect = async (id) => {
     if (typeof Notification !== "undefined" && Notification.requestPermission) {
       try { await Notification.requestPermission(); } catch (e) {}
@@ -152,21 +170,121 @@ function MemberSelect({ onSelect }) {
       <div style={{ fontSize:28, fontWeight:800, color:"#f1f5f9", marginBottom:8 }}>
         👨‍👩‍👦 家族のやること
       </div>
-      <div style={{ fontSize:14, color:"#64748b", marginBottom:48 }}>
+      <div style={{ fontSize:14, color:"#64748b", marginBottom:32 }}>
         だれですか？
       </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:16, width:"100%", maxWidth:280 }}>
-        {MEMBERS.filter(m => m.id !== "all").map(m => (
-          <button key={m.id} onClick={() => handleSelect(m.id)} style={{
-            padding:"20px 24px", borderRadius:20, border:`2px solid ${m.color}44`,
-            background:m.color+"11", color:"#f1f5f9", fontSize:18, fontWeight:700,
-            cursor:"pointer", display:"flex", alignItems:"center", gap:16,
-          }}>
-            <span style={{ fontSize:36 }}>{m.emoji}</span>
-            <span>{m.name}</span>
-            <span style={{ marginLeft:"auto", fontSize:12, color:m.color, background:m.color+"22", padding:"4px 12px", borderRadius:20 }}>タップ</span>
-          </button>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:320 }}>
+        {[{ id:"all", name:"すべて", color:"#94a3b8" }, ...members].map(m => (
+          <div key={m.id}>
+            {/* メンバーボタン */}
+            <button onClick={() => handleSelect(m.id)} style={{
+              width:"100%", padding:"20px 24px", borderRadius:"20px 20px 0 0",
+              border:`2px solid ${m.color}44`, borderBottom:"none",
+              background:m.color+"11", color:"#f1f5f9", fontSize:18, fontWeight:700,
+              cursor:"pointer", display:"flex", alignItems:"center", gap:16,
+            }}>
+              <span style={{ fontSize:36 }}>{m.emoji}</span>
+              <span>{m.name}</span>
+              <span style={{ marginLeft:"auto", fontSize:12, color:m.color, background:m.color+"22", padding:"4px 12px", borderRadius:20 }}>タップ</span>
+            </button>
+
+            {/* 削除ボタン */}
+            <div style={{
+              display:"flex", borderRadius:"0 0 20px 20px",
+              border:`2px solid ${m.color}44`, borderTop:"1px solid #1e293b",
+              overflow:"hidden"
+            }}>
+              {deleteConfirm === m.id ? (
+                <>
+                  <div style={{ flex:1, padding:"10px 0", background:"#1e293b", textAlign:"center", fontSize:12, color:"#94a3b8" }}>
+                    本当に削除しますか？
+                  </div>
+                  <button onClick={() => { onDelete(m.id); setDeleteConfirm(null); }} style={{
+                    padding:"10px 16px", background:"#ff4757", border:"none",
+                    color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer"
+                  }}>削除</button>
+                  <button onClick={() => setDeleteConfirm(null)} style={{
+                    padding:"10px 16px", background:"#334155", border:"none",
+                    color:"#94a3b8", fontSize:12, cursor:"pointer"
+                  }}>キャンセル</button>
+                </>
+              ) : (
+                <button onClick={() => setDeleteConfirm(m.id)} style={{
+                  flex:1, padding:"10px 0", background:"#1e293b", border:"none",
+                  color:"#ff4757", fontSize:12, cursor:"pointer", fontWeight:600
+                }}>🗑 削除</button>
+              )}
+            </div>
+          </div>
         ))}
+
+        {/* メンバー追加 */}
+        {showAddForm ? (
+          <div style={{ background:"#1e293b", borderRadius:20, padding:16, border:"1px solid #334155" }}>
+            <div style={{ fontSize:13, fontWeight:700, color:"#e2e8f0", marginBottom:12 }}>新しいメンバー</div>
+
+            {/* 名前 */}
+            <input value={newName} onChange={e => setNewName(e.target.value)}
+              placeholder="名前を入力" style={{
+                width:"100%", padding:"10px 12px", background:"#0f172a",
+                border:"1px solid #334155", borderRadius:10, color:"#e2e8f0",
+                fontSize:15, marginBottom:12, outline:"none",
+                fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif"
+              }}/>
+
+            {/* 絵文字選択 */}
+            <div style={{ fontSize:11, color:"#64748b", marginBottom:6 }}>絵文字</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+              {EMOJI_OPTIONS.map(e => (
+                <button key={e} onClick={() => setNewEmoji(e)} style={{
+                  width:36, height:36, borderRadius:10, border:`2px solid ${newEmoji===e?"#ffa94d":"#334155"}`,
+                  background: newEmoji===e?"#ffa94d22":"#0f172a",
+                  fontSize:20, cursor:"pointer"
+                }}>{e}</button>
+              ))}
+            </div>
+
+            {/* カラー選択 */}
+            <div style={{ fontSize:11, color:"#64748b", marginBottom:6 }}>カラー</div>
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              {COLOR_OPTIONS.map(c => (
+                <div key={c} onClick={() => setNewColor(c)} style={{
+                  width:28, height:28, borderRadius:"50%", background:c,
+                  cursor:"pointer", border:`3px solid ${newColor===c?"#fff":"transparent"}`,
+                  transition:"border 0.15s"
+                }}/>
+              ))}
+            </div>
+
+            {/* プレビュー */}
+            <div style={{
+              padding:"12px 16px", borderRadius:14,
+              background:newColor+"11", border:`1px solid ${newColor}44`,
+              display:"flex", alignItems:"center", gap:12, marginBottom:12
+            }}>
+              <span style={{ fontSize:28 }}>{newEmoji}</span>
+              <span style={{ fontSize:16, fontWeight:700, color:"#f1f5f9" }}>{newName || "名前"}</span>
+            </div>
+
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={handleAdd} style={{
+                flex:1, padding:"11px 0", borderRadius:12, border:"none",
+                background:"#ffa94d", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer"
+              }}>追加</button>
+              <button onClick={() => setShowAddForm(false)} style={{
+                flex:1, padding:"11px 0", borderRadius:12, border:"none",
+                background:"#334155", color:"#94a3b8", fontSize:14, cursor:"pointer"
+              }}>キャンセル</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddForm(true)} style={{
+            width:"100%", padding:"16px 0", borderRadius:20,
+            border:"2px dashed #334155", background:"transparent",
+            color:"#64748b", fontSize:15, cursor:"pointer", fontWeight:600
+          }}>＋ メンバーを追加</button>
+        )}
       </div>
     </div>
   );
@@ -421,6 +539,7 @@ export default function FamilyTodo() {
   );
   const [expandedId, setExpandedId]     = useState(null);
   const [scopeDialog, setScopeDialog]   = useState(null);
+  const [members, setMembers] = useState([]);
 
   // Firestoreリアルタイム同期
   useEffect(() => {
@@ -435,7 +554,21 @@ export default function FamilyTodo() {
         .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setNotifications(data);
     });
-    return () => { unsubTodos(); unsubNotifs(); };
+
+    // ↓ 追加
+    const unsubMembers = onSnapshot(collection(db, "members"), (snap) => {
+      const data = snap.docs
+        .map((d) => ({ ...d.data(), id: d.id }))
+        .filter(m => m.name) // nameがあるものだけ
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      setMembers(data);
+    });
+
+    return () => {
+      unsubTodos();
+      unsubNotifs();
+      unsubMembers(); // ↓ 追加
+    };
   }, []);
 
   // FCMトークン登録
@@ -588,6 +721,19 @@ export default function FamilyTodo() {
     }
   }
 
+  async function addMember({ name, emoji, color }) {
+    const id = name + "_" + Date.now();
+    await setDoc(doc(db, "members", id), {
+      name, emoji, color,
+      order: members.length,
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  async function deleteMember(id) {
+    await deleteDoc(doc(db, "members", id));
+  }
+
   async function save() {
     if (!draft.title.trim()) return;
 
@@ -630,15 +776,20 @@ export default function FamilyTodo() {
 
   if (!currentUser) {
     return (
-      <MemberSelect onSelect={(id) => {
-        localStorage.setItem("familyTodoUser", id);
-        setCurrentUser(id);
-      }} />
+      <MemberSelect
+        members={members}
+        onSelect={(id) => {
+          localStorage.setItem("familyTodoUser", id);
+          setCurrentUser(id);
+        }}
+        onAdd={addMember}
+        onDelete={deleteMember}
+      />
     );
   }
 
   const accentColor = "#ffa94d";
-  const memberObj = MEMBERS.find(m => m.id === currentUser);
+  const memberObj = members.find(m => m.id === currentUser) || { name:"", emoji:"👤", color:"#94a3b8" };
 
   return (
     <div style={{
@@ -741,7 +892,7 @@ export default function FamilyTodo() {
           </div>
         )}
         {visibleTodos.map((todo, i) => {
-          const am = MEMBERS.find(m => m.id === todo.assignee) || MEMBERS[1];
+          const am = members.find(m => m.id === todo.assignee) || { name:"?", emoji:"👤", color:"#94a3b8" };
           const done = isCompleted(todo);
           const expanded = expandedId === todo.id;
           return (
@@ -915,7 +1066,7 @@ export default function FamilyTodo() {
               <div>
                 <div style={{ fontSize:12, color:"#64748b", marginBottom:6 }}>担当するひと</div>
                 <div style={{ display:"flex", gap:8 }}>
-                  {MEMBERS.filter(m=>m.id!=="all").map(m => (
+                  {members.map(m=>m.id!=="all").map(m => (
                     <div key={m.id} onClick={() => setDraft(d=>({...d,assignee:m.id}))} style={{
                       flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:5,
                       padding:"9px 0", borderRadius:12, cursor:"pointer",
